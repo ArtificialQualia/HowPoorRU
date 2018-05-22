@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+{% block content %}
+  Your wallet is currently full of <strong>{{ wallet.data }}</strong> ISKs
+	<strong>Your ESI Informations:</strong>
+	<dl>
+	    <dt>Character ID:</dt><dd>{{ current_user.character_id }}</dd>
+	    <dt>Access Token:</dt><dd>{{ current_user.access_token }}</dd>
+	    <dt>Access Token valid until:</dt><dd>{{ current_user.access_token_expires }}</dd>
+	    <dt>Refresh Token:</dt><dd>{{ current_user.refresh_token }}</dd>
+	</dl>
+{% endblock %}

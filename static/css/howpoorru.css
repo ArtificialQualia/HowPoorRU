@@ -1,0 +1,68 @@
+body, html {
+  min-height: 100%;
+  margin: 0;
+}
+
+a:link, a:hover, a:visited, a:active {
+	color: white;
+}
+
+a:hover img {
+	text-decoration: none;
+}
+
+#header {
+	height: 50px;
+  line-height: 50px;
+	background-color: black;
+	color: white;
+	margin-bottom: 5px;
+	width: 100%;
+}
+
+#bg { 
+  height: 100%; 
+
+  /* Center and scale the image nicely */
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  
+  padding-top: 0px;
+  padding-right: 0px;
+  padding-bottom: 0px;
+  padding-left: 0px;
+}
+
+#content, #footer {
+	color: white;
+	background-color: rgba(0, 0, 0, 0.5);
+	border-radius: 25px;
+	padding: 20px;
+	
+	margin-bottom: 5px;
+	margin-right: 5px;
+	margin-left: 5px;
+}
+
+#header .col-xs-6 {
+	padding: 0px;
+}
+
+#logo {
+	font-size: 24px;
+}
+
+.row {
+	margin: 0px;
+}
+
+.isk-img {
+	height: 40px;
+	width: 40px;
+}
+
+.table-hover tbody tr:hover {
+	background-color: rgba(0, 0, 0, 0.7);
+}

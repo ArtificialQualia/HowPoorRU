@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+  <title>Index - HowPoor.RU</title>
+{% endblock %}
+{% block content %}
+	<h3 class="text-center">Latest Transactions</h3>
+  <table class="table table-hover table-reactive">
+    <tr>
+      <th>Amount</th>
+      <th>Balance</th>
+      <th>Date</th>
+      <th>Description</th>
+      <th>First_Party_ID</th>
+      <th>ID</th>
+      <th>Ref_Type</th>
+      <th>Second_Party_ID</th>
+    </tr>
+    {% for entry in journal_entries %}
+    <tr>
+      <td>{{ entry.amount }}</td>
+      <td>{{ entry.balance }}</td>
+      <td>{{ entry.date }}</td>
+      <td>{{ entry.description }}</td>
+      <td>{{ entry.first_party_id }}</td>
+      <td>{{ entry.id }}</td>
+      <td>{{ entry.ref_type }}</td>
+      <td>{{ entry.second_party_id }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+{% endblock %}
