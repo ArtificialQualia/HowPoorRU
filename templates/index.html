@@ -8,24 +8,40 @@
   <table class="table table-hover table-reactive">
     <tr>
       <th>Amount</th>
-      <th>Balance</th>
       <th>Date</th>
       <th>Description</th>
-      <th>First_Party_ID</th>
-      <th>ID</th>
-      <th>Ref_Type</th>
-      <th>Second_Party_ID</th>
+      <th>Type</th>
+      <th>First Party</th>
+      <th>Second Party</th>
     </tr>
     {% for entry in journal_entries %}
     <tr>
-      <td>{{ entry.amount }}</td>
-      <td>{{ entry.balance }}</td>
+      {% if entry.amount < 0 %}
+      <td class='negative-isk'>
+        {{ '{0:0,.2f}'.format(entry.amount) }}
+      </td>
+      {% else %}
+      <td class='positive-isk'>
+        {{ '{0:0,.2f}'.format(entry.amount) }}
+      </td>
+      {% endif %}
       <td>{{ entry.date }}</td>
       <td>{{ entry.description }}</td>
-      <td>{{ entry.first_party_id }}</td>
-      <td>{{ entry.id }}</td>
       <td>{{ entry.ref_type }}</td>
+      {% if entry.first_party_url != 0 %}
+      <td>
+        <a href='{{ entry.first_party_url }}'>{{ entry.first_party_id }}</a>
+      </td>
+      {% else %}
+      <td>{{ entry.first_party_id }}</td>
+      {% endif %}
+      {% if entry.second_party_url != 0 %}
+      <td>
+        <a href='{{ entry.second_party_url }}'>{{ entry.second_party_id }}</a>
+      </td>
+      {% else %}
       <td>{{ entry.second_party_id }}</td>
+      {% endif %}
     </tr>
     {% endfor %}
   </table>

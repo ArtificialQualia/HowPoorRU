@@ -1,29 +1,12 @@
 {% extends "layout.html" %}
 {% block head %}
   {{ super() }}
-  <title>{{ character_data.CharacterName }}</title>
-  <style>
-	table {
-	    font-family: arial, sans-serif;
-	    border-collapse: collapse;
-	    width: 100%;
-	}
-	
-	td, th {
-	    border: 1px solid #dddddd;
-	    text-align: left;
-	    padding: 8px;
-	}
-	
-	tr:nth-child(even) {
-	    background-color: #dddddd;
-	}
-	</style>
+  <title>{{ character_data.CharacterName }} - HowPoor.RU</title>
 {% endblock %}
 {% block content %}
   <h1><b>{{ character_data.CharacterName }}</b>'s wallet amount: <b>{{ character_data.wallet }}</b></h1>
   <div>Journal Entries:</div>
-  <table>
+  <table class="table table-hover table-reactive">
     <tr>
 	    <th>Amount</th>
 	    <th>Balance</th>

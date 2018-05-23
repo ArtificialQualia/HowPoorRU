@@ -14,12 +14,18 @@ from datetime import timedelta
 from datetime import timezone
 
 def process_wallets():
+    print(datetime.now())
+    print('start wallet refresh')
+    global db
     db = MongoClient(config.MONGO_HOST, config.MONGO_PORT)[config.MONGO_DBNAME]
+    
+    global esiapp
     try:
         esiapp = App.create(config.ESI_SWAGGER_JSON)
     except error.HTTPError as e:
         print('Error with creating ESI connection: ' + e)
         return
+    
     # init the security object
     esisecurity = EsiSecurity(
         app=esiapp,
@@ -30,16 +36,19 @@ def process_wallets():
     )
     
     # init the client
+    global esiclient
     esiclient = EsiClient(
         security=esisecurity,
         cache=None,
         headers={'User-Agent': config.ESI_USER_AGENT}
     )
-    
+
     user_cursor = db.users.find({})
     
     datetime_format = "%Y-%m-%dT%X"
     for user_doc in user_cursor:
+        if 'tokens' not in user_doc:
+            continue
         data_to_update = {}
         access_token_expires = datetime.strptime(user_doc['tokens']['ExpiresOn'], datetime_format)
         sso_data = {
@@ -61,15 +70,13 @@ def process_wallets():
         )
         wallet = esiclient.request(op)
         if type(wallet.data) is not float:
-            print(wallet)
+            print(wallet.data)
             return
         data_to_update['wallet'] = wallet.data
         last_update = datetime.fromtimestamp(user_doc.get('last_journal_update') or 0.0, timezone.utc)
         now_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
         if last_update + timedelta(hours=1) < now_utc:
-            print(datetime.now())
-            print('updating journal now')
-            new_journal_entries = process_journal(1, esiapp, esiclient, user_doc)
+            new_journal_entries = process_journal(1, user_doc)
             data_to_update['last_journal_update'] = now_utc.timestamp()
             if len(new_journal_entries) > 0:
                 data_to_update['last_journal_entry'] = new_journal_entries[0]['id']
@@ -78,8 +85,10 @@ def process_wallets():
         character_filter = {'CharacterID': user_doc['CharacterID']}
         update = {"$set": data_to_update}
         db.users.update_one(character_filter, update)
+    print(datetime.now())
+    print('done wallet refresh')
         
-def process_journal(page, esiapp, esiclient, user_doc):
+def process_journal(page, user_doc):
     last_journal_entry = user_doc.get('last_journal_entry') or 0
     op = esiapp.op['get_characters_character_id_wallet_journal'](
         character_id=user_doc['CharacterID'],
@@ -90,13 +99,65 @@ def process_journal(page, esiapp, esiclient, user_doc):
     new_journal_entries = []
     for journal_entry in journal.data:
         if journal_entry['id'] > last_journal_entry:
-            journal_entry['CharacterID'] = user_doc['CharacterID']
-            journal_entry['date'] = journal_entry['date'].v.replace(tzinfo=timezone.utc).timestamp()
+            decode_journal_entry(journal_entry)
             new_journal_entries.append(journal_entry)
         else:
             return new_journal_entries
     if page < num_pages:
-        next_pages_entries = process_journal(page+1, esiapp, esiclient, user_doc)
+        next_pages_entries = process_journal(page+1, user_doc)
         return new_journal_entries.extend(next_pages_entries)
     return new_journal_entries
     
+def decode_journal_entry(journal_entry):
+    journal_entry['date'] = journal_entry['date'].v.replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %X")
+    decode_party_id(journal_entry['first_party_id'])
+    decode_party_id(journal_entry['second_party_id'])
+    
+    
+def decode_party_id(party_id):
+    character_filter = {'CharacterID': party_id}
+    corp_filter = {'corporation_id': party_id}
+    alliance_filter = {'alliance_id': party_id}
+    result = db.users.find_one(character_filter)
+    if result is not None:
+        return
+    result = db.corporations.find_one(corp_filter)
+    if result is not None:
+        return
+    result = db.alliances.find_one(alliance_filter)
+    if result is not None:
+        return
+    op = esiapp.op['get_characters_character_id'](
+        character_id=party_id
+    )
+    result = esiclient.request(op)
+    if result.status == 200:
+        db_entry = {
+            'CharacterName': result.data['name'],
+            'CharacterID': party_id
+        }
+        db.users.insert_one(db_entry)
+        return
+    op = esiapp.op['get_corporations_corporation_id'](
+        corporation_id=party_id
+    )
+    result = esiclient.request(op)
+    if result.status == 200:
+        db_entry = {
+            'name': result.data['name'],
+            'corporation_id': party_id
+        }
+        db.corporations.insert_one(db_entry)
+        return
+    op = esiapp.op['get_alliances_alliance_id'](
+        alliance_id=party_id
+    )
+    result = esiclient.request(op)
+    if result.status == 200:
+        db_entry = {
+            'name': result.data['name'],
+            'corporation_id': party_id
+        }
+        db.corporations.insert_one(db_entry)
+        return
+    print('No character/corp/alliance found for: ' + str(party_id))

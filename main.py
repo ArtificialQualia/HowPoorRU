@@ -33,6 +33,7 @@ app = Flask(__name__)
 app.config.from_object(config)
 
 mongo = PyMongo(app)
+
 esiapp = App.create(config.ESI_SWAGGER_JSON)
 
 login_manager = LoginManager()
@@ -61,6 +62,11 @@ if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
     @scheduler.authenticate
     def authenticate(auth):
         return auth['username'] == config.SCHEDULER_AUTH_USER and auth['password'] == config.SCHEDULER_AUTH_PASSWORD
+
+with app.app_context():
+    mongo.db.users.create_index('CharacterID', unique=True)
+    mongo.db.corporations.create_index('corporation_id', unique=True)
+    mongo.db.alliances.create_index('alliance_id', unique=True)
 
 class User(UserMixin):
     def __init__(self, character_id=None, character_data=None, auth_response=None):
@@ -162,8 +168,6 @@ def callback():
     # if the user is already authed, we log him out
     if current_user.is_authenticated:
         logout_user()
-
-    mongo.db.users.create_index('CharacterID', unique=True)
     
     user = User(character_data=cdata, auth_response=auth_response)
 
@@ -182,18 +186,52 @@ def index():
     journal_cursor = mongo.db.journals.find({}).sort('id', -1)
     journal_entries = []
     for entry in journal_cursor:
+        entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
+        entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
         journal_entries.append(entry)
     return render_template('index.html', journal_entries=journal_entries)
 
 @app.route('/character/<int:character_id>')
 def character(character_id):
-    filter = {'CharacterID': character_id}
-    character_data = mongo.db.users.find_one_or_404(filter)
-    journal_cursor = mongo.db.journals.find(filter).sort('id', -1)
+    character_filter = {'CharacterID': character_id}
+    character_data = mongo.db.users.find_one_or_404(character_filter)
+    journal_search = {'$or':[ 
+        {'first_party_id': character_id},
+        {'second_party_id': character_id}
+    ]}
+    journal_cursor = mongo.db.journals.find(journal_search).sort('id', -1)
     journal_entries = []
     for entry in journal_cursor:
         journal_entries.append(entry)
     return render_template('character.html', character_data=character_data, journal_entries=journal_entries)
+
+@app.route('/corporation/<int:corporation_id>')
+def corporation(corporation_id):
+    corp_filter = {'corporation_id': corporation_id}
+    corp_data = mongo.db.users.find_one_or_404(corp_filter)
+    journal_search = {'$or':[ 
+        {'first_party_id': corporation_id},
+        {'second_party_id': corporation_id}
+    ]}
+    journal_cursor = mongo.db.journals.find(journal_search).sort('id', -1)
+    journal_entries = []
+    for entry in journal_cursor:
+        journal_entries.append(entry)
+    return render_template('corporation.html', corp_data=corp_data, journal_entries=journal_entries)
+
+@app.route('/alliance/<int:alliance_id>')
+def alliance(alliance_id):
+    alliance_filter = {'alliance_id': alliance_id}
+    alliance_data = mongo.db.users.find_one_or_404(alliance_filter)
+    journal_search = {'$or':[ 
+        {'first_party_id': alliance_id},
+        {'second_party_id': alliance_id}
+    ]}
+    journal_cursor = mongo.db.journals.find(journal_search).sort('id', -1)
+    journal_entries = []
+    for entry in journal_cursor:
+        journal_entries.append(entry)
+    return render_template('alliance.html', alliance_data=alliance_data, journal_entries=journal_entries)
 
 @app.route('/testself')
 @login_required
@@ -204,6 +242,24 @@ def testself():
     )
     wallet = esiclient.request(op)
     return render_template('testself.html', wallet=wallet)
+
+def decode_journal_party_id(party_id):
+    character_filter = {'CharacterID': party_id}
+    result = mongo.db.users.find_one(character_filter)
+    if result is not None:
+        return result['CharacterName'], url_for('character', character_id=result['CharacterID'])
+    
+    corp_filter = {'corporation_id': party_id}
+    result = mongo.db.corporations.find_one(corp_filter)
+    if result is not None:
+        return result['name'], url_for('corporation', corporation_id=result['corporation_id'])
+    
+    alliance_filter = {'alliance_id': party_id}
+    result = mongo.db.alliances.find_one(alliance_filter)
+    if result is not None:
+        return result['name'], url_for('alliance', alliance_id=result['alliance_id'])
+    
+    return party_id, 0
 
 if __name__ == '__main__':
     app.run(port=config.PORT, host=config.HOST)

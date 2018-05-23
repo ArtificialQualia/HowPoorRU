@@ -11,6 +11,10 @@ a:hover img {
 	text-decoration: none;
 }
 
+td a:link, td a:hover, td a:visited, td a:active {
+	color: orange;
+}
+
 #header {
 	height: 50px;
   line-height: 50px;
@@ -37,7 +41,7 @@ a:hover img {
 
 #content, #footer {
 	color: white;
-	background-color: rgba(0, 0, 0, 0.5);
+	background-color: rgba(0, 0, 0, 0.6);
 	border-radius: 25px;
 	padding: 20px;
 	
@@ -61,6 +65,16 @@ a:hover img {
 .isk-img {
 	height: 40px;
 	width: 40px;
+}
+
+.negative-isk {
+	color: red;
+	font-weight: bold;
+}
+
+.positive-isk {
+  color: green;
+  font-weight: bold;
 }
 
 .table-hover tbody tr:hover {
