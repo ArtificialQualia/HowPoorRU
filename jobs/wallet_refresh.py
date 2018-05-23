@@ -23,7 +23,7 @@ def process_wallets():
     try:
         esiapp = App.create(config.ESI_SWAGGER_JSON)
     except error.HTTPError as e:
-        print('Error with creating ESI connection: ' + e)
+        print('Error with creating ESI connection: ' + str(e))
         return
     
     # init the security object

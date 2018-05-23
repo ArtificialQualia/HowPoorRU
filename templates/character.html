@@ -4,40 +4,6 @@
   <title>{{ character_data.CharacterName }} - HowPoor.RU</title>
 {% endblock %}
 {% block content %}
-  <h1><b>{{ character_data.CharacterName }}</b>'s wallet amount: <b>{{ character_data.wallet }}</b></h1>
-  <div>Journal Entries:</div>
-  <table class="table table-hover table-reactive">
-    <tr>
-	    <th>Amount</th>
-	    <th>Balance</th>
-	    <th>Context_ID</th>
-	    <th>Context_ID_Type</th>
-	    <th>Date</th>
-	    <th>Description</th>
-	    <th>First_Party_ID</th>
-	    <th>ID</th>
-	    <th>Reason</th>
-	    <th>Ref_Type</th>
-	    <th>Second_Party_ID</th>
-	    <th>Tax</th>
-	    <th>Tax_Receiver_ID</th>
-    </tr>
-    {% for entry in journal_entries %}
-    <tr>
-      <td>{{ entry.amount }}</td>
-      <td>{{ entry.balance }}</td>
-      <td>{{ entry.context_id }}</td>
-      <td>{{ entry.context_id_type }}</td>
-      <td>{{ entry.date }}</td>
-      <td>{{ entry.description }}</td>
-      <td>{{ entry.first_party_id }}</td>
-      <td>{{ entry.id }}</td>
-      <td>{{ entry.reason }}</td>
-      <td>{{ entry.ref_type }}</td>
-      <td>{{ entry.second_party_id }}</td>
-      <td>{{ entry.tax }}</td>
-      <td>{{ entry.tax_receiver_id }}</td>
-    </tr>
-    {% endfor %}
-  </table>
+  <h1><b>{{ character_data.CharacterName }}</b>'s wallet amount: <b class='positive-isk'>{{ '{0:0,.2f}'.format(character_data.wallet or 0) }}</b></h1>
+  {% include 'entity_journal_entries.html' %}
 {% endblock %}

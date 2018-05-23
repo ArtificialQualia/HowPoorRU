@@ -202,13 +202,15 @@ def character(character_id):
     journal_cursor = mongo.db.journals.find(journal_search).sort('id', -1)
     journal_entries = []
     for entry in journal_cursor:
+        entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
+        entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
         journal_entries.append(entry)
     return render_template('character.html', character_data=character_data, journal_entries=journal_entries)
 
 @app.route('/corporation/<int:corporation_id>')
 def corporation(corporation_id):
     corp_filter = {'corporation_id': corporation_id}
-    corp_data = mongo.db.users.find_one_or_404(corp_filter)
+    corp_data = mongo.db.corporations.find_one_or_404(corp_filter)
     journal_search = {'$or':[ 
         {'first_party_id': corporation_id},
         {'second_party_id': corporation_id}
@@ -216,13 +218,15 @@ def corporation(corporation_id):
     journal_cursor = mongo.db.journals.find(journal_search).sort('id', -1)
     journal_entries = []
     for entry in journal_cursor:
+        entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
+        entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
         journal_entries.append(entry)
     return render_template('corporation.html', corp_data=corp_data, journal_entries=journal_entries)
 
 @app.route('/alliance/<int:alliance_id>')
 def alliance(alliance_id):
     alliance_filter = {'alliance_id': alliance_id}
-    alliance_data = mongo.db.users.find_one_or_404(alliance_filter)
+    alliance_data = mongo.db.alliances.find_one_or_404(alliance_filter)
     journal_search = {'$or':[ 
         {'first_party_id': alliance_id},
         {'second_party_id': alliance_id}
@@ -230,6 +234,8 @@ def alliance(alliance_id):
     journal_cursor = mongo.db.journals.find(journal_search).sort('id', -1)
     journal_entries = []
     for entry in journal_cursor:
+        entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
+        entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
         journal_entries.append(entry)
     return render_template('alliance.html', alliance_data=alliance_data, journal_entries=journal_entries)
 
@@ -259,7 +265,7 @@ def decode_journal_party_id(party_id):
     if result is not None:
         return result['name'], url_for('alliance', alliance_id=result['alliance_id'])
     
-    return party_id, 0
+    return party_id, None
 
 if __name__ == '__main__':
     app.run(port=config.PORT, host=config.HOST)

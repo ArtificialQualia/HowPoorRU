@@ -28,14 +28,14 @@
       <td>{{ entry.date }}</td>
       <td>{{ entry.description }}</td>
       <td>{{ entry.ref_type }}</td>
-      {% if entry.first_party_url != 0 %}
+      {% if entry.first_party_url != None %}
       <td>
         <a href='{{ entry.first_party_url }}'>{{ entry.first_party_id }}</a>
       </td>
       {% else %}
       <td>{{ entry.first_party_id }}</td>
       {% endif %}
-      {% if entry.second_party_url != 0 %}
+      {% if entry.second_party_url != None %}
       <td>
         <a href='{{ entry.second_party_url }}'>{{ entry.second_party_id }}</a>
       </td>
