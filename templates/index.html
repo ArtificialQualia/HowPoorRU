@@ -4,7 +4,28 @@
   <title>Index - HowPoor.RU</title>
 {% endblock %}
 {% block content %}
-	<h3 class="text-center">Latest Transactions</h3>
+	<h3 class="text-center col">Latest Transactions</h3>
+	<div class="row">
+	  <ul class="pagination col justify-content-end">
+	    {% if page_number == 1 %}
+      <li class="page-item active"><a class="page-link" href="#">{{ page_number }}</a></li>
+      <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number+1) }}">{{ page_number + 1 }}</a></li>
+      <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number+2) }}">{{ page_number + 2 }}</a></li>
+      <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number+1) }}">&raquo;</a></li>
+	    {% elif page_number == 10 %}
+	    <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number-1) }}">&laquo;</a></li>
+      <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number-2) }}">{{ page_number - 2 }}</a></li>
+      <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number-1) }}">{{ page_number - 1 }}</a></li>
+      <li class="page-item active"><a class="page-link" href="#">{{ page_number }}</a></li>
+	    {% else %}
+	    <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number-1) }}">&laquo;</a></li>
+	    <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number-1) }}">{{ page_number - 1 }}</a></li>
+	    <li class="page-item active"><a class="page-link" href="#">{{ page_number }}</a></li>
+	    <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number+1) }}">{{ page_number + 1 }}</a></li>
+	    <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number+1) }}">&raquo;</a></li>
+	    {% endif %}
+	  </ul>
+  </div>
   <table class="table table-hover table-reactive">
     <tr>
       <th>Amount</th>

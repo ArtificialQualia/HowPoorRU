@@ -4,6 +4,12 @@
   <title>{{ character_data.CharacterName }} - HowPoor.RU</title>
 {% endblock %}
 {% block content %}
-  <h1><b>{{ character_data.CharacterName }}</b>'s wallet amount: <b class='positive-isk'>{{ '{0:0,.2f}'.format(character_data.wallet or 0) }}</b></h1>
+  <h1><b>{{ character_data.CharacterName }}</b>'s wallet amount: 
+    {% if character_data.wallet is not defined %}
+    <b>?</b>
+    {% else %}
+    <b class='positive-isk'>{{ '{0:0,.2f}'.format(character_data.wallet) }}</b>
+    {% endif %}
+  </h1>
   {% include 'entity_journal_entries.html' %}
 {% endblock %}

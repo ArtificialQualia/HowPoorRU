@@ -99,6 +99,10 @@ def process_journal(page, user_doc):
     new_journal_entries = []
     for journal_entry in journal.data:
         if journal_entry['id'] > last_journal_entry:
+            journal_entry['entity_id'] = user_doc['CharacterID']
+            duplicate_found = look_for_duplicate(journal_entry)
+            if duplicate_found:
+                continue
             decode_journal_entry(journal_entry)
             new_journal_entries.append(journal_entry)
         else:
@@ -107,6 +111,19 @@ def process_journal(page, user_doc):
         next_pages_entries = process_journal(page+1, user_doc)
         return new_journal_entries.extend(next_pages_entries)
     return new_journal_entries
+    
+def look_for_duplicate(journal_entry):
+    journal_filter = {'id': journal_entry['id']}
+    result = db.journals.find_one(journal_filter)
+    if result is not None:
+        update = { '$set': {
+                'balance_2': journal_entry['balance'],
+                'entity_id_2': journal_entry['entity_id']
+            }
+        }
+        db.journals.update_one(journal_filter, update)
+        return True
+    return False
     
 def decode_journal_entry(journal_entry):
     journal_entry['date'] = journal_entry['date'].v.replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %X")

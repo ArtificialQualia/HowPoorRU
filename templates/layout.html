@@ -13,24 +13,29 @@
 	<body>
 	  <div id="bg" class="container-fluid" style="background-image: url('{{ url_for('static', filename='img/background.jpg') }}')">
 	    <div id="header" class="navbar row">
-        <div class="col-xs-6">
-          <a href="/" id="logo">
+        <div class="col-6">
+          <a href="/" id="logo" class="white-link">
 	          <img class="isk-img" src="{{ url_for('static', filename='img/isk.png') }}" />HowPoor.RU
 	        </a>
 	      </div>
-	      <div class="col-xs-6 text-right" style="padding-right: 5px;">
+	      <div class="col-6 text-right" style="padding-right: 5px;">
 	        {% if current_user.is_authenticated %}
-	        <a href="{{ url_for('character', character_id=current_user.character_id) }}">
+	        <a href="{{ url_for('character', character_id=current_user.character_id) }}" class="white-link">
 		        <img src="https://image.eveonline.com/Character/{{ current_user.character_id }}_32.jpg" />{{ current_user.character_name }}
 		      </a>
-	        <a href="{{ url_for('logout') }}">Logout</a> 
+	        <a href="{{ url_for('logout') }}" class="white-link">Logout</a> 
 	        {% else %}
-	        <a href="{{ url_for('login') }}">Login</a>
+	        <div class="dropdown">
+		        <a href="#" class="dropdown-toggle white-link" data-toggle="dropdown">Login <span class="caret"></span></a>
+		        <ul class="dropdown-menu dropdown-menu-right login-dropdown">
+		          <a href="{{ url_for('login') }}" class="white-link">Login</a>
+		        </ul>
+		      </div>
 	        {% endif %}
 	      </div>
       </div>
-	    <div id="content" class="row">{% block content %}{% endblock %}</div>
-	    <div id="footer" class="row">
+	    <div id="content" class="">{% block content %}{% endblock %}</div>
+	    <div id="footer" class="">
 	      {% block footer %}
 	      Footer Stuff.
 	      {% endblock %}

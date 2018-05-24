@@ -17,7 +17,11 @@
   </tr>
   {% for entry in journal_entries %}
   <tr>
+    {% if entry.balance is not defined %}
+    <td>N/A</td>
+    {% else %}
     <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.balance) }}</td>
+    {% endif %}
     {% if entry.amount < 0 %}
     <td class='negative-isk'>
       {{ '{0:0,.2f}'.format(entry.amount) }}
@@ -34,14 +38,14 @@
     <td>{{ entry.description }}</td>
     {% if entry.first_party_url != None %}
     <td>
-      <a href='{{ entry.first_party_url }}'>{{ entry.first_party_id }}</a>
+      <a href='{{ entry.first_party_url }}' class="orange-link">{{ entry.first_party_id }}</a>
     </td>
     {% else %}
     <td>{{ entry.first_party_id }}</td>
     {% endif %}
     {% if entry.second_party_url != None %}
     <td>
-      <a href='{{ entry.second_party_url }}'>{{ entry.second_party_id }}</a>
+      <a href='{{ entry.second_party_url }}' class="orange-link">{{ entry.second_party_id }}</a>
     </td>
     {% else %}
     <td>{{ entry.second_party_id }}</td>

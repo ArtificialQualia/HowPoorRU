@@ -9,6 +9,7 @@ from flask import request
 from flask import session
 from flask import redirect
 from flask import url_for
+from flask import abort
 
 from flask_pymongo import PyMongo
 from pymongo import ReturnDocument
@@ -67,6 +68,7 @@ with app.app_context():
     mongo.db.users.create_index('CharacterID', unique=True)
     mongo.db.corporations.create_index('corporation_id', unique=True)
     mongo.db.alliances.create_index('alliance_id', unique=True)
+    mongo.db.journals.create_index('id', unique=True)
 
 class User(UserMixin):
     def __init__(self, character_id=None, character_data=None, auth_response=None):
@@ -182,14 +184,19 @@ def load_user(character_id):
     return User(character_id=character_id)
 
 @app.route('/')
-def index():
-    journal_cursor = mongo.db.journals.find({}).sort('id', -1)
+@app.route('/<int:page_number>')
+def index(page_number=1):
+    if page_number > 10 or page_number < 1:
+        abort(404) 
+    journal_cursor = mongo.db.journals.find({})
     journal_entries = []
+    skip_amount = (page_number - 1) * config.PAGE_SIZE
+    journal_cursor.sort('id', -1).skip(skip_amount).limit(config.PAGE_SIZE)
     for entry in journal_cursor:
         entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
         entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
         journal_entries.append(entry)
-    return render_template('index.html', journal_entries=journal_entries)
+    return render_template('index.html', journal_entries=journal_entries, page_number=page_number)
 
 @app.route('/character/<int:character_id>')
 def character(character_id):
@@ -204,6 +211,9 @@ def character(character_id):
     for entry in journal_cursor:
         entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
         entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
+        if 'entity_id_2' in entry and entry['entity_id_2'] == character_id:
+            entry['amount'] = entry['amount'] * -1
+            entry['balance'] = entry['balance_2']
         journal_entries.append(entry)
     return render_template('character.html', character_data=character_data, journal_entries=journal_entries)
 

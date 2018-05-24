@@ -5,9 +5,10 @@ html {
 body {
   min-height: 100%;
   margin: 0;
+  font-size: 14px;
 }
 
-a:link, a:hover, a:visited, a:active {
+a.white-link:link, a.white-link:hover, a.white-link:visited, a.white-link:active {
 	color: white;
 }
 
@@ -25,7 +26,6 @@ td a:link, td a:hover, td a:visited, td a:active {
 	background-color: black;
 	color: white;
 	margin-bottom: 5px;
-	width: 100%;
 }
 
 #bg { 
@@ -71,6 +71,11 @@ td a:link, td a:hover, td a:visited, td a:active {
 	width: 40px;
 }
 
+.login-dropdown {
+	background-color: black;
+	margin-top: 0px;
+}
+
 .negative-isk {
 	color: red;
 	font-weight: bold;
@@ -81,6 +86,23 @@ td a:link, td a:hover, td a:visited, td a:active {
   font-weight: bold;
 }
 
+a.page-link:link, a.page-link:visited, a.page-link:active {
+	background-color: black;
+	color: orange;
+	border-color: grey;
+}
+
+a.page-link:hover {
+	background-color: grey;
+}
+
+.page-item.active .page-link {
+	background-color: grey;
+	border-color: grey;
+	color: orange;
+}
+
 .table-hover tbody tr:hover {
 	background-color: rgba(0, 0, 0, 0.7);
 }
+
