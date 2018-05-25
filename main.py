@@ -29,6 +29,7 @@ import hashlib
 import hmac
 from datetime import datetime
 import os
+from collections import OrderedDict
 
 app = Flask(__name__)
 app.config.from_object(config)
@@ -82,6 +83,8 @@ class User(UserMixin):
             character_filter = {'CharacterID': character_data['CharacterID']}
             character_data['tokens'] = auth_response
             character_data['tokens']['ExpiresOn'] = character_data.pop('ExpiresOn')
+            if 'Scopes' not in character_data:
+                character_data['Scopes'] = ''
             update = {"$set": character_data}
             user_data = mongo.db.users.find_one_and_update(character_filter, update, return_document=ReturnDocument.AFTER, upsert=True)
         self.update_token(user_data['tokens'])
@@ -195,9 +198,9 @@ def index(page_number=1, *args):
     skip_amount = (page_number - 1) * config.PAGE_SIZE
     journal_cursor.sort('id', -1).skip(skip_amount).limit(config.PAGE_SIZE)
     for entry in journal_cursor:
-        entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
-        entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
-        journal_entries.append(entry)
+        decode_journal_parties(entry)
+        sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
+        journal_entries.append(sorted_entry)
     return render_template('index.html', journal_entries=journal_entries, page_number=page_number)
 
 @app.route('/character/<int:entity_id>')
@@ -206,6 +209,10 @@ def character(entity_id, page_number=1):
     page_range_check(page_number)
     character_filter = {'CharacterID': entity_id}
     character_data = mongo.db.users.find_one_or_404(character_filter)
+    if 'corporation_id' in character_data:
+        character_data['corporation_name'], character_data['corporation_url'] = decode_journal_party_id(character_data['corporation_id'])
+    if 'alliance_id' in character_data:
+        character_data['alliance_name'], character_data['alliance_url'] = decode_journal_party_id(character_data['alliance_id'])
     journal_search = {'$or':[ 
         {'first_party_id': entity_id},
         {'second_party_id': entity_id}
@@ -215,17 +222,13 @@ def character(entity_id, page_number=1):
     journal_cursor.sort('id', -1).skip(skip_amount).limit(config.PAGE_SIZE)
     journal_entries = []
     for entry in journal_cursor:
-        entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
-        entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
         if 'tax_receiver_id' in entry:
-            entry['tax_receiver_id'], entry['tax_receiver_url']  = decode_journal_party_id(entry['tax_receiver_id'])
             entry['tax'] = entry['tax'] * -1
         if entry['entity_id'] != entity_id:
             entry['amount'] = entry['amount'] * -1
-            del entry['balance']
-        if 'entity_id_2' in entry and entry['entity_id_2'] == entity_id:
-            entry['balance'] = entry['balance_2']
-        journal_entries.append(entry)
+        decode_journal_parties(entry)
+        sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
+        journal_entries.append(sorted_entry)
     return render_template('character.html', character_data=character_data, journal_entries=journal_entries, page_number=page_number)
 
 @app.route('/corporation/<int:entity_id>')
@@ -244,21 +247,13 @@ def corporation(entity_id, page_number=1):
     journal_cursor.sort('id', -1).skip(skip_amount).limit(config.PAGE_SIZE)
     journal_entries = []
     for entry in journal_cursor:
-        entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
-        entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
-        if 'tax_receiver_id' in entry:
-            if entry['tax_receiver_id'] == entity_id:
-                entry['amount'] = entry['tax'] * -1
-                entry['tax'] = entry['tax'] * -1
-            entry['tax_receiver_id'], entry['tax_receiver_url']  = decode_journal_party_id(entry['tax_receiver_id'])
         if entry['entity_id'] != entity_id:
             entry['amount'] = entry['amount'] * -1
-            if 'tax' in entry:
+            if 'tax' in entry and entry['tax_receiver_id'] != entity_id:
                 entry['tax'] = entry['tax'] * -1
-            del entry['balance']
-        if 'entity_id_2' in entry and entry['entity_id_2'] == entity_id:
-            entry['balance'] = entry['balance_2']
-        journal_entries.append(entry)
+        decode_journal_parties(entry)
+        sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
+        journal_entries.append(sorted_entry)
     return render_template('corporation.html', corp_data=corp_data, journal_entries=journal_entries, page_number=page_number)
 
 @app.route('/alliance/<int:alliance_id>')
@@ -277,6 +272,12 @@ def alliance(alliance_id):
         journal_entries.append(entry)
     return render_template('alliance.html', alliance_data=alliance_data, journal_entries=journal_entries)
 
+@app.route('/journal/<int:journal_id>')
+def journal(journal_id):
+    journal_filter = {'id': journal_id}
+    journal_data = mongo.db.journals.find_one_or_404(journal_filter)
+    return render_template('journal.html', journal_data=journal_data)
+
 @app.route('/testself')
 @login_required
 def testself():
@@ -290,7 +291,15 @@ def testself():
 def page_range_check(page_number):
     if page_number > 10 or page_number < 1:
         abort(404)
-    
+        
+def decode_journal_parties(entry):
+    entry['entity_id'], entry['entity_url'] = decode_journal_party_id(entry['entity_id'])
+    if 'entity_id_2' in entry:
+        entry['entity_id_2'], entry['entity_url_2'] = decode_journal_party_id(entry['entity_id_2'])
+    entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
+    entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
+    if 'tax_receiver_id' in entry:
+        entry['tax_receiver_id'], entry['tax_receiver_url']  = decode_journal_party_id(entry['tax_receiver_id'])
 
 def decode_journal_party_id(party_id):
     character_filter = {'CharacterID': party_id}

@@ -1,10 +1,3 @@
-{% if character_data is defined %}
-{% set entity_id = character_data.CharacterID %}
-{% elif corp_data is defined %}
-{% set entity_id = corp_data.corporation_id %}
-{% else %}
-{% set entity_id = None %}
-{% endif %}
 <ul class="pagination col justify-content-end">
   {% if page_number == 1 %}
   <li class="page-item active"><a class="page-link" href="#">{{ page_number }}</a></li>

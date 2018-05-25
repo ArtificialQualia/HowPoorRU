@@ -1,0 +1,203 @@
+{% if character_data is defined %}
+{% set entity_id = character_data.CharacterID %}
+{% set entity_name = character_data.CharacterName %}
+{% elif corp_data is defined %}
+{% set entity_id = corp_data.corporation_id %}
+{% set entity_name = corp_data.name %}
+{% else %}
+{% set entity_id = None %}
+{% endif %}
+{% include 'pagination.html' %}
+<div class="double-scroll table-responsive">
+	<table class="table table-hover">
+	  <thead>
+		  <tr>
+		    {% if entity_id != None %}
+		    <th>Balance</th>
+		    {% endif %}
+		    <th>Amount</th>
+		    <th>Date</th>
+		    <th>Type</th>
+		    <th>Description</th>
+		    <th>First Party</th>
+		    <th>Second Party</th>
+	      {% if entity_id != None %}
+		    <th>Context</th>
+		    <th>Tax</th>
+		    <th>Tax Receiver</th>
+	      {% endif %}
+		  </tr>
+		</thead>
+		<tbody>
+		  {% for entry in journal_entries %}
+		  <tr class="transaction-row-click" data-toggle="modal" data-target="#transaction_{{ entry.id }}">
+	      {% if entity_id != None %}
+	        {% if entity_name == entry.entity_id %}
+          <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.balance) }}</td>
+	        {% elif entity_name == entry.entity_id_2 %}
+          <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.balance_2) }}</td>
+	        {% else %}
+          <td>N/A</td>
+	        {% endif %}
+	      {% endif %}
+		    {% if entry.amount < 0 %}
+          {% if (entry.tax is defined) and (entry.tax > 0) %}
+          <td class='positive-isk'>
+            {{ '{0:0,.2f}'.format(entry.tax) }}
+          </td>
+          {% else %}
+			    <td class='negative-isk'>
+			      {{ '{0:0,.2f}'.format(entry.amount) }}
+			    </td>
+			    {% endif %}
+		    {% elif entry.amount == 0.0 %}
+		    <td><b>0.00</b></td>
+		    {% else %}
+        <td class='positive-isk'>
+          {{ '{0:0,.2f}'.format(entry.amount) }}
+        </td>
+		    {% endif %}
+		    <td>{{ entry.date }}</td>
+		    <td>{{ entry.ref_type.replace('_', ' ') }}</td>
+		    <td>{{ entry.description }}</td>
+		    {% if entry.first_party_url != None %}
+		    <td>
+		      <a href='{{ entry.first_party_url }}' class="orange-link">{{ entry.first_party_id }}</a>
+		    </td>
+		    {% else %}
+		    <td>{{ entry.first_party_id }}</td>
+		    {% endif %}
+		    {% if entry.second_party_url != None %}
+		    <td>
+		      <a href='{{ entry.second_party_url }}' class="orange-link">{{ entry.second_party_id }}</a>
+		    </td>
+		    {% else %}
+		    <td>{{ entry.second_party_id }}</td>
+		    {% endif %}
+	      {% if entity_id != None %}
+			    <td>{{ entry.context_id }}</td>
+			    {% if entry.tax is defined %}
+			      {% if entry.tax < 0 %}
+				    <td class='negative-isk'>
+				      {{ '{0:0,.2f}'.format(entry.tax) }}
+				    </td>
+				    {% else %}
+				    <td class='positive-isk'>
+				      {{ '{0:0,.2f}'.format(entry.tax) }}
+				    </td>
+				    {% endif %}
+			    {% else %}
+			    <td></td>
+			    {% endif %}
+			    {% if entry.tax_receiver_url != None %}
+			    <td>
+			      <a href='{{ entry.tax_receiver_url }}' class="orange-link">{{ entry.tax_receiver_id }}</a>
+			    </td>
+			    {% else %}
+			    <td>{{ entry.tax_receiver_id }}</td>
+			    {% endif %}
+	      {% endif %}
+		  </tr>
+		  {% endfor %}
+		</tbody>
+	</table>
+</div>
+<br />
+{% include 'pagination.html' %}
+{% for entry in journal_entries %}
+<div class="modal fade" tabindex="-1" role="dialog" id="transaction_{{ entry.id }}">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <h4 class="modal-title text-center">Transaction Details</h4>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+
+      <!-- Modal body -->
+      <div class="modal-body">
+        <div class="double-scroll table-responsive">
+				  <table class="table table-hover table-bordered">
+				    <thead>
+				      <tr>
+				        <th scope="col">Key</th>
+				        <th scope="col">Value</th>
+				      </tr>
+				    </thead>
+				    <tbody>
+				      {% for key, value in entry.items() %}
+              {% if key == 'entity_id' %}
+              <tr>
+                <th scope="row">{{ key }}</th>
+                <td>
+                  <a href='{{ entry.entity_url }}' class="orange-link">{{ value }}</a>
+                </td>
+              </tr>
+              {% elif key == 'entity_id_2' %}
+              <tr>
+                <th scope="row">{{ key }}</th>
+                <td>
+                  <a href='{{ entry.entity_url_2 }}' class="orange-link">{{ value }}</a>
+                </td>
+              </tr>
+				      {% elif key == 'first_party_id' %}
+              <tr>
+				        <th scope="row">{{ key }}</th>
+					      {% if entry.first_party_url != None %}
+				        <td>
+				          <a href='{{ entry.first_party_url }}' class="orange-link">{{ value }}</a>
+				        </td>
+				        {% else %}
+				        <td>{{ value }}</td>
+				        {% endif %}
+              </tr>
+			        {% elif key == 'second_party_id' %}
+              <tr>
+                <th scope="row">{{ key }}</th>
+                {% if entry.second_party_url != None %}
+                <td>
+                  <a href='{{ entry.second_party_url }}' class="orange-link">{{ value }}</a>
+                </td>
+                {% else %}
+                <td>{{ value }}</td>
+                {% endif %}
+              </tr>
+              {% elif key == 'tax_receiver_id' %}
+              <tr>
+                <th scope="row">{{ key }}</th>
+                {% if entry.tax_receiver_url != None %}
+                <td>
+                  <a href='{{ entry.tax_receiver_url }}' class="orange-link">{{ value }}</a>
+                </td>
+                {% else %}
+                <td>{{ value }}</td>
+                {% endif %}
+              </tr>
+				      {% elif ((key != '_id') and (key != 'first_party_url') and 
+				        (key != 'second_party_url') and (key != 'tax_receiver_url') and 
+                (key != 'entity_url') and (key != 'entity_url_2')) %}
+				      <tr>
+				        <th scope="row">{{ key }}</th>
+				        {% if value is number %}
+                <td>{{ value|abs }}</td>
+                {% else %}
+                <td>{{ value }}</td>
+                {% endif %}
+				      </tr>
+				      {% endif %}
+				      {% endfor %}
+				    </tbody>
+				  </table>
+				</div>
+      </div>
+
+      <!-- Modal footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endfor %}

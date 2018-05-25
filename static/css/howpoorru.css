@@ -21,6 +21,19 @@ a:hover img {
 	text-decoration: none;
 }
 
+td {
+	height: 100%;
+}
+
+td a {
+  display: block;
+  height: 100%;
+}
+
+td a div{
+	height: 100%;
+}
+
 #header {
 	height: 50px;
   line-height: 50px;
@@ -66,6 +79,10 @@ a:hover img {
 
 .row {
 	margin: 0px;
+}
+
+.transaction-row-click {
+	cursor: pointer;
 }
 
 .isk-img {
@@ -124,4 +141,36 @@ a.page-link:hover {
 .sso-btn {
 	padding: 0px;
 	border: 0px;
+}
+
+.table {
+	margin-bottom: 0px;
+}
+
+.modal-title {
+	width: 100%;
+}
+
+.close {
+	color: white;
+}
+
+.close:hover {
+	color: grey;
+}
+
+.modal-dialog {
+	margin-top: 75px;
+}
+
+.modal-content {
+	background-color: black;
+}
+
+.character-table td, .character-table th {
+	padding: 6px;
+}
+
+.col-no-padding {
+	padding: 0px;
 }
