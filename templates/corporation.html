@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+  <title>{{ corp_data.name }} - HowPoor.RU</title>
+{% endblock %}
+{% block content %}
+  <h1><b>{{ corp_data.name }}</b>'s wallet amount: 
+    {% if corp_data.wallet is not defined %}
+    <b>?</b>
+    {% else %}
+    <b class='positive-isk'>{{ '{0:0,.2f}'.format(corp_data.wallet) }}</b>
+    {% endif %}
+  </h1>
+  {% include 'entity_journal_entries.html' %}
+{% endblock %}

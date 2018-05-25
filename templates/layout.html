@@ -20,24 +20,59 @@
 	      </div>
 	      <div class="col-6 text-right" style="padding-right: 5px;">
 	        {% if current_user.is_authenticated %}
-	        <a href="{{ url_for('character', character_id=current_user.character_id) }}" class="white-link">
+	        <a href="{{ url_for('character', entity_id=current_user.character_id) }}" class="white-link">
 		        <img src="https://image.eveonline.com/Character/{{ current_user.character_id }}_32.jpg" />{{ current_user.character_name }}
 		      </a>
-	        <a href="{{ url_for('logout') }}" class="white-link">Logout</a> 
+	        <span class="dropdown">
+            <a href="#" class="dropdown-toggle white-link" data-toggle="dropdown"> <span class="caret"></span></a>
+            <ul class="dropdown-menu dropdown-menu-right logout-dropdown">
+              <a href="{{ url_for('logout') }}" class="white-link"> Logout</a>
+            </ul>
+          </span>
 	        {% else %}
 	        <div class="dropdown">
 		        <a href="#" class="dropdown-toggle white-link" data-toggle="dropdown">Login <span class="caret"></span></a>
 		        <ul class="dropdown-menu dropdown-menu-right login-dropdown">
-		          <a href="{{ url_for('login') }}" class="white-link">Login</a>
+	            <li>
+	              <form action="{{ url_for('login') }}">
+		              <div class="form-group form-check">
+		                <input type="checkbox" class="form-check-input" name="corp_scope" value="esi-wallet.read_corporation_wallets.v1" id="corporation_scope" disabled>
+	                  <label class="form-check-label" for="corporation_scope">
+	                    Allow HowPoorRU to read corporation wallet data
+	                  </label>
+	                </div>
+			            <div class="form-group form-check">
+			              <input type="checkbox" class="form-check-input" name="char_scope" value="esi-wallet.read_character_wallet.v1" id="character_scope" checked>
+								    <label class="form-check-label" for="character_scope">
+								      Allow HowPoorRU to read character wallet data
+								    </label>
+								  </div>
+								  <div class="col text-center form-group">
+								    <button type="submit" class="btn sso-btn">
+				              <img class="" src="{{ url_for('static', filename='img/eve-sso-login-black-large.png') }}" />
+				            </button>
+			            </div>
+		            </form>
+		          </li>
 		        </ul>
 		      </div>
+		      <script>
+			      $("ul.dropdown-menu").on("click", function(e) {
+			        e.stopPropagation();
+			      });
+			    </script>
 	        {% endif %}
 	      </div>
       </div>
 	    <div id="content" class="">{% block content %}{% endblock %}</div>
-	    <div id="footer" class="">
+	    <div id="footer" class="row">
 	      {% block footer %}
-	      Footer Stuff.
+	      <div class="col">
+	        Made by <a href="{{ url_for('character', entity_id=1858883174) }}" class="orange-link">Demogorgon Asmodeous</a>
+	      </div>
+	      <div class="col text-right">
+          <a href="https://github.com/ArtificialQualia/HowPoorRU" class="orange-link">GitHub</a>
+        </div>
 	      {% endblock %}
 	    </div>
     </div>

@@ -5,33 +5,13 @@
 {% endblock %}
 {% block content %}
 	<h3 class="text-center col">Latest Transactions</h3>
-	<div class="row">
-	  <ul class="pagination col justify-content-end">
-	    {% if page_number == 1 %}
-      <li class="page-item active"><a class="page-link" href="#">{{ page_number }}</a></li>
-      <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number+1) }}">{{ page_number + 1 }}</a></li>
-      <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number+2) }}">{{ page_number + 2 }}</a></li>
-      <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number+1) }}">&raquo;</a></li>
-	    {% elif page_number == 10 %}
-	    <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number-1) }}">&laquo;</a></li>
-      <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number-2) }}">{{ page_number - 2 }}</a></li>
-      <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number-1) }}">{{ page_number - 1 }}</a></li>
-      <li class="page-item active"><a class="page-link" href="#">{{ page_number }}</a></li>
-	    {% else %}
-	    <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number-1) }}">&laquo;</a></li>
-	    <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number-1) }}">{{ page_number - 1 }}</a></li>
-	    <li class="page-item active"><a class="page-link" href="#">{{ page_number }}</a></li>
-	    <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number+1) }}">{{ page_number + 1 }}</a></li>
-	    <li class="page-item"><a class="page-link" href="{{ url_for('index', page_number=page_number+1) }}">&raquo;</a></li>
-	    {% endif %}
-	  </ul>
-  </div>
-  <table class="table table-hover table-reactive">
+	{% include 'pagination.html' %}
+  <table class="table table-hover table-responsive">
     <tr>
       <th>Amount</th>
       <th>Date</th>
-      <th>Description</th>
       <th>Type</th>
+      <th>Description</th>
       <th>First Party</th>
       <th>Second Party</th>
     </tr>
@@ -41,14 +21,16 @@
       <td class='negative-isk'>
         {{ '{0:0,.2f}'.format(entry.amount) }}
       </td>
+	    {% elif entry.amount == 0.0 %}
+	    <td><b>0.00</b></td>
       {% else %}
       <td class='positive-isk'>
         {{ '{0:0,.2f}'.format(entry.amount) }}
       </td>
       {% endif %}
       <td>{{ entry.date }}</td>
+      <td>{{ entry.ref_type.replace('_', ' ') }}</td>
       <td>{{ entry.description }}</td>
-      <td>{{ entry.ref_type }}</td>
       {% if entry.first_party_url != None %}
       <td>
         <a href='{{ entry.first_party_url }}'>{{ entry.first_party_id }}</a>
@@ -66,4 +48,5 @@
     </tr>
     {% endfor %}
   </table>
+  {% include 'pagination.html' %}
 {% endblock %}

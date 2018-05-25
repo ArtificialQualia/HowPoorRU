@@ -4,8 +4,13 @@ html {
 
 body {
   min-height: 100%;
+  min-width: 100%;
   margin: 0;
   font-size: 14px;
+}
+
+a:link, a:hover, a:visited, a:active {
+  color: orange;
 }
 
 a.white-link:link, a.white-link:hover, a.white-link:visited, a.white-link:active {
@@ -14,10 +19,6 @@ a.white-link:link, a.white-link:hover, a.white-link:visited, a.white-link:active
 
 a:hover img {
 	text-decoration: none;
-}
-
-td a:link, td a:hover, td a:visited, td a:active {
-	color: orange;
 }
 
 #header {
@@ -30,6 +31,7 @@ td a:link, td a:hover, td a:visited, td a:active {
 
 #bg { 
 	min-height: 100vh;
+	min-width: 100%;
 
   /* Center and scale the image nicely */
   background-attachment: fixed;
@@ -72,8 +74,21 @@ td a:link, td a:hover, td a:visited, td a:active {
 }
 
 .login-dropdown {
-	background-color: black;
+	background-color: rgba(20, 20, 20, 1);
 	margin-top: 0px;
+	line-height: normal;
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-bottom: 0px;
+	color: white;
+}
+
+.logout-dropdown {
+  background-color: rgba(20, 20, 20, 1);
+  line-height: normal;
+  padding-left: 10px;
+  padding-right: 10px;
+  color: white;
 }
 
 .negative-isk {
@@ -106,3 +121,7 @@ a.page-link:hover {
 	background-color: rgba(0, 0, 0, 0.7);
 }
 
+.sso-btn {
+	padding: 0px;
+	border: 0px;
+}

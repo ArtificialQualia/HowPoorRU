@@ -129,6 +129,8 @@ def decode_journal_entry(journal_entry):
     journal_entry['date'] = journal_entry['date'].v.replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %X")
     decode_party_id(journal_entry['first_party_id'])
     decode_party_id(journal_entry['second_party_id'])
+    if 'tax_receiver_id' in journal_entry:
+        decode_party_id(journal_entry['tax_receiver_id'])
     
     
 def decode_party_id(party_id):
@@ -173,7 +175,7 @@ def decode_party_id(party_id):
     if result.status == 200:
         db_entry = {
             'name': result.data['name'],
-            'corporation_id': party_id
+            'alliance_id': party_id
         }
         db.corporations.insert_one(db_entry)
         return

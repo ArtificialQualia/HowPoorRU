@@ -131,8 +131,11 @@ def login():
     """ this redirects the user to the EVE SSO login """
     token = generate_token()
     session['token'] = token
+    scopes = []
+    for scope in request.args:
+        scopes.append(request.args.get(scope))
     return redirect(esisecurity.get_auth_uri(
-        scopes=['esi-wallet.read_character_wallet.v1'],
+        scopes=scopes,
         state=token,
     ))
 
@@ -185,9 +188,8 @@ def load_user(character_id):
 
 @app.route('/')
 @app.route('/<int:page_number>')
-def index(page_number=1):
-    if page_number > 10 or page_number < 1:
-        abort(404) 
+def index(page_number=1, *args):
+    page_range_check(page_number)
     journal_cursor = mongo.db.journals.find({})
     journal_entries = []
     skip_amount = (page_number - 1) * config.PAGE_SIZE
@@ -198,40 +200,66 @@ def index(page_number=1):
         journal_entries.append(entry)
     return render_template('index.html', journal_entries=journal_entries, page_number=page_number)
 
-@app.route('/character/<int:character_id>')
-def character(character_id):
-    character_filter = {'CharacterID': character_id}
+@app.route('/character/<int:entity_id>')
+@app.route('/character/<int:entity_id>/<int:page_number>')
+def character(entity_id, page_number=1):
+    page_range_check(page_number)
+    character_filter = {'CharacterID': entity_id}
     character_data = mongo.db.users.find_one_or_404(character_filter)
     journal_search = {'$or':[ 
-        {'first_party_id': character_id},
-        {'second_party_id': character_id}
+        {'first_party_id': entity_id},
+        {'second_party_id': entity_id}
     ]}
-    journal_cursor = mongo.db.journals.find(journal_search).sort('id', -1)
+    journal_cursor = mongo.db.journals.find(journal_search)
+    skip_amount = (page_number - 1) * config.PAGE_SIZE
+    journal_cursor.sort('id', -1).skip(skip_amount).limit(config.PAGE_SIZE)
     journal_entries = []
     for entry in journal_cursor:
         entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
         entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
-        if 'entity_id_2' in entry and entry['entity_id_2'] == character_id:
+        if 'tax_receiver_id' in entry:
+            entry['tax_receiver_id'], entry['tax_receiver_url']  = decode_journal_party_id(entry['tax_receiver_id'])
+            entry['tax'] = entry['tax'] * -1
+        if entry['entity_id'] != entity_id:
             entry['amount'] = entry['amount'] * -1
+            del entry['balance']
+        if 'entity_id_2' in entry and entry['entity_id_2'] == entity_id:
             entry['balance'] = entry['balance_2']
         journal_entries.append(entry)
-    return render_template('character.html', character_data=character_data, journal_entries=journal_entries)
+    return render_template('character.html', character_data=character_data, journal_entries=journal_entries, page_number=page_number)
 
-@app.route('/corporation/<int:corporation_id>')
-def corporation(corporation_id):
-    corp_filter = {'corporation_id': corporation_id}
+@app.route('/corporation/<int:entity_id>')
+@app.route('/corporation/<int:entity_id>/<int:page_number>')
+def corporation(entity_id, page_number=1):
+    page_range_check(page_number)
+    corp_filter = {'corporation_id': entity_id}
     corp_data = mongo.db.corporations.find_one_or_404(corp_filter)
     journal_search = {'$or':[ 
-        {'first_party_id': corporation_id},
-        {'second_party_id': corporation_id}
+        {'first_party_id': entity_id},
+        {'second_party_id': entity_id},
+        {'tax_receiver_id': entity_id}
     ]}
-    journal_cursor = mongo.db.journals.find(journal_search).sort('id', -1)
+    journal_cursor = mongo.db.journals.find(journal_search)
+    skip_amount = (page_number - 1) * config.PAGE_SIZE
+    journal_cursor.sort('id', -1).skip(skip_amount).limit(config.PAGE_SIZE)
     journal_entries = []
     for entry in journal_cursor:
         entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
         entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
+        if 'tax_receiver_id' in entry:
+            if entry['tax_receiver_id'] == entity_id:
+                entry['amount'] = entry['tax'] * -1
+                entry['tax'] = entry['tax'] * -1
+            entry['tax_receiver_id'], entry['tax_receiver_url']  = decode_journal_party_id(entry['tax_receiver_id'])
+        if entry['entity_id'] != entity_id:
+            entry['amount'] = entry['amount'] * -1
+            if 'tax' in entry:
+                entry['tax'] = entry['tax'] * -1
+            del entry['balance']
+        if 'entity_id_2' in entry and entry['entity_id_2'] == entity_id:
+            entry['balance'] = entry['balance_2']
         journal_entries.append(entry)
-    return render_template('corporation.html', corp_data=corp_data, journal_entries=journal_entries)
+    return render_template('corporation.html', corp_data=corp_data, journal_entries=journal_entries, page_number=page_number)
 
 @app.route('/alliance/<int:alliance_id>')
 def alliance(alliance_id):
@@ -259,16 +287,21 @@ def testself():
     wallet = esiclient.request(op)
     return render_template('testself.html', wallet=wallet)
 
+def page_range_check(page_number):
+    if page_number > 10 or page_number < 1:
+        abort(404)
+    
+
 def decode_journal_party_id(party_id):
     character_filter = {'CharacterID': party_id}
     result = mongo.db.users.find_one(character_filter)
     if result is not None:
-        return result['CharacterName'], url_for('character', character_id=result['CharacterID'])
+        return result['CharacterName'], url_for('character', entity_id=result['CharacterID'])
     
     corp_filter = {'corporation_id': party_id}
     result = mongo.db.corporations.find_one(corp_filter)
     if result is not None:
-        return result['name'], url_for('corporation', corporation_id=result['corporation_id'])
+        return result['name'], url_for('corporation', entity_id=result['corporation_id'])
     
     alliance_filter = {'alliance_id': party_id}
     result = mongo.db.alliances.find_one(alliance_filter)
