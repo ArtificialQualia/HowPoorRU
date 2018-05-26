@@ -47,6 +47,12 @@ JOBS = [
             'seconds': 120
         },
         {
+            'id': 'process_corp_wallets',
+            'func': 'jobs.wallet_refresh:process_corp_wallets',
+            'trigger': 'interval',
+            'seconds': 300
+        },
+        {
             'id': 'update_all_public_info',
             'func': 'jobs.public_info_refresh:update_all_public_info',
             'trigger': 'interval',
