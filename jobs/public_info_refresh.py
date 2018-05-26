@@ -38,7 +38,7 @@ def users_update():
         shared.db.users.update_one(character_filter, update)
         
 def corps_update():
-    corp_cursor = shared.db.corps.find({})
+    corp_cursor = shared.db.corporations.find({})
     for corp_doc in corp_cursor:
         data_to_update = {}
         op = shared.esiapp.op['get_corporations_corporation_id'](
@@ -59,11 +59,10 @@ def corps_update():
             shared.decode_party_id(data_to_update['alliance_id'])
         if 'date_founded' in public_data.data:
             data_to_update['date_founded'] = public_data.data['date_founded'].v.replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %X")
-            shared.decode_party_id(data_to_update['date_founded'])
         
         corporation_filter = {'corporation_id': corp_doc['corporation_id']}
         update = {"$set": data_to_update}
-        shared.db.corps.update_one(corporation_filter, update)
+        shared.db.corporations.update_one(corporation_filter, update)
         
 def alliances_update():
     alliance_cursor = shared.db.alliances.find({})
@@ -83,10 +82,6 @@ def alliances_update():
             data_to_update['executor_corporation_id'] = public_data.data['executor_corporation_id']
             shared.decode_party_id(data_to_update['executor_corporation_id'])
         
-        alliance_filter = {'alliance_id': alliance_doc['alliance_id']}
-        update = {"$set": data_to_update}
-        shared.db.alliances.update_one(alliance_filter, update)
-        
         op = shared.esiapp.op['get_alliances_alliance_id_corporations'](
             alliance_id=alliance_doc['alliance_id']
         )
@@ -95,7 +90,12 @@ def alliances_update():
             print(public_data.data)
             continue
         for corp in public_data.data:
-            data_to_update = {'corporation_id': corp}
+            corp_to_add = {'corporation_id': corp}
             corporation_filter = {'corporation_id': corp}
-            update = {"$set": data_to_update}
-            shared.db.corps.find_one_and_update(corporation_filter, update, upsert=True)
+            update = {"$set": corp_to_add}
+            shared.db.corporations.find_one_and_update(corporation_filter, update, upsert=True)
+        data_to_update['corps'] = public_data.data
+        
+        alliance_filter = {'alliance_id': alliance_doc['alliance_id']}
+        update = {"$set": data_to_update}
+        shared.db.alliances.update_one(alliance_filter, update)

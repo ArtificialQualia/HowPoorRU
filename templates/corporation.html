@@ -4,12 +4,94 @@
   <title>{{ corp_data.name }} - HowPoor.RU</title>
 {% endblock %}
 {% block content %}
-  <h1><b>{{ corp_data.name }}</b>'s wallet amount: 
-    {% if corp_data.wallet is not defined %}
-    <b>?</b>
-    {% else %}
-    <b class='positive-isk'>{{ '{0:0,.2f}'.format(corp_data.wallet) }}</b>
-    {% endif %}
-  </h1>
+  <div class="row">
+    <div class="col col-auto">
+      <img src="https://image.eveonline.com/Corporation/{{ corp_data.corporation_id }}_128.png" height="128" width="128" />
+    </div>
+    <div class="col col-auto">
+      <table class="table table-responsive character-table">
+        <tr>
+          <th scope="row">Name:</th>
+          <td>
+            <a href="{{ url_for('corporation', entity_id=corp_data.corporation_id) }}" class="orange-link">
+              {{ corp_data.name }}
+            </a>
+          </td>
+        </tr>
+        {% if corp_data.ticker is defined %}
+        <tr>
+          <th scope="row">Ticker:</th>
+          <td>
+            {{ corp_data.ticker }}
+          </td>
+        </tr>
+        {% endif %}
+        {% if corp_data.alliance_id is defined %}
+        <tr>
+          <th scope="row">Alliance:</th>
+          <td>
+          {% if corp_data.alliance_url is defined %}
+            <a href="{{ corp_data.alliance_url }}" class="orange-link">
+              {{ corp_data.alliance_name }}
+            </a>
+          {% else %}
+            {{ corp_data.alliance_id }}
+          {% endif %}
+          </td>
+        </tr>
+        {% endif %}
+        {% if corp_data.ceo_id is defined %}
+        <tr>
+          <th scope="row">CEO:</th>
+          <td>
+          {% if corp_data.ceo_url is defined %}
+            <a href="{{ corp_data.ceo_url }}" class="orange-link">
+              {{ corp_data.ceo_name }}
+            </a>
+          {% else %}
+            {{ corp_data.ceo_id }}
+          {% endif %}
+          </td>
+        </tr>
+        {% endif %}
+        {% if corp_data.member_count is defined %}
+        <tr>
+          <th scope="row">Member Count:</th>
+          <td>
+            {{ corp_data.member_count }}
+          </td>
+        </tr>
+        {% endif %}
+        {% if corp_data.tax_rate is defined %}
+        <tr>
+          <th scope="row">Tax Rate:</th>
+          <td>
+            {{ corp_data.tax_rate * 100 }}%
+          </td>
+        </tr>
+        {% endif %}
+        {% if corp_data.date_founded is defined %}
+        <tr>
+          <th scope="row">Date Founded:</th>
+          <td>
+            {{ corp_data.date_founded }}
+          </td>
+        </tr>
+        {% endif %}
+      </table>
+    </div>
+    <div class="col">
+      <div class="row">
+        <h1>
+          <span>Wallet Amount:</span>
+          {% if corp_data.wallet is not defined %}
+          <div>?</div>
+          {% else %}
+          <div class='positive-isk'>{{ '{0:0,.2f}'.format(corp_data.wallet) }} ISK</div>
+          {% endif %}
+        </h1>
+      </div>
+    </div>
+  </div>
   {% include 'journal_entries.html' %}
 {% endblock %}

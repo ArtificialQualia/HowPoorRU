@@ -4,6 +4,9 @@
 {% elif corp_data is defined %}
 {% set entity_id = corp_data.corporation_id %}
 {% set entity_name = corp_data.name %}
+{% elif alliance_data is defined %}
+{% set entity_id = alliance_data.alliance_id %}
+{% set entity_name = alliance_data.name %}
 {% else %}
 {% set entity_id = None %}
 {% endif %}
