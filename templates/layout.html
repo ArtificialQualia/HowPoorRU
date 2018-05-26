@@ -28,7 +28,7 @@
 	        <span class="dropdown">
             <a href="#" class="dropdown-toggle white-link" data-toggle="dropdown"> <span class="caret"></span></a>
             <ul class="dropdown-menu dropdown-menu-right logout-dropdown">
-              <a href="{{ url_for('logout') }}" class="white-link"> Logout</a>
+              <a href="{{ url_for('sso_pages.logout') }}" class="white-link"> Logout</a>
             </ul>
           </span>
 	        {% else %}
@@ -36,7 +36,7 @@
 		        <a href="#" class="dropdown-toggle white-link" data-toggle="dropdown">Login <span class="caret"></span></a>
 		        <ul class="dropdown-menu dropdown-menu-right login-dropdown">
 	            <li>
-	              <form action="{{ url_for('login') }}">
+	              <form action="{{ url_for('sso_pages.login') }}">
 		              <div class="form-group form-check">
 		                <input type="checkbox" class="form-check-input" name="corp_scope" value="esi-wallet.read_corporation_wallets.v1" id="corporation_scope" disabled>
 	                  <label class="form-check-label" for="corporation_scope">

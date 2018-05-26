@@ -8,6 +8,16 @@ from urllib import error
 
 import config
 
+import logging
+
+logger = logging.getLogger('jobs_logger')
+logger.setLevel(config.SCHEDULER_LOG_LEVEL)
+ch = logging.StreamHandler()
+ch.setLevel(config.SCHEDULER_LOG_LEVEL)
+formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
 def initialize_job():
     global db
     global esiapp
@@ -16,11 +26,7 @@ def initialize_job():
     
     db = MongoClient(config.MONGO_HOST, config.MONGO_PORT)[config.MONGO_DBNAME]
     
-    try:
-        esiapp = App.create(config.ESI_SWAGGER_JSON)
-    except error.HTTPError as e:
-        print('Error with creating ESI connection: ' + str(e))
-        return
+    esiapp = App.create(config.ESI_SWAGGER_JSON)
     
     # init the security object
     esisecurity = EsiSecurity(
@@ -84,4 +90,4 @@ def decode_party_id(party_id):
         }
         db.alliances.insert_one(db_entry)
         return
-    print('No character/corp/alliance found for: ' + str(party_id))
+    logger.info('No character/corp/alliance found for: ' + str(party_id))

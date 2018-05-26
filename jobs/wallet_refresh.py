@@ -1,60 +1,64 @@
 from jobs import shared
+from jobs.shared import logger
 
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 
+datetime_format = "%Y-%m-%dT%X"
+
 def process_wallets():
-    print(datetime.now())
-    print('start wallet refresh')
+    logger.debug('start wallet refresh')
     shared.initialize_job()
 
     user_cursor = shared.db.users.find({})
     
-    datetime_format = "%Y-%m-%dT%X"
     for user_doc in user_cursor:
-        if 'tokens' not in user_doc:
-            continue
-        if 'Scopes' not in user_doc or user_doc['Scopes'] != 'esi-wallet.read_character_wallet.v1':
-            continue
-        data_to_update = {}
-        access_token_expires = datetime.strptime(user_doc['tokens']['ExpiresOn'], datetime_format)
-        sso_data = {
-            'access_token': user_doc['tokens']['access_token'],
-            'refresh_token': user_doc['tokens']['refresh_token'],
-            'expires_in': (
-                access_token_expires - datetime.utcnow()
-            ).total_seconds()
-        }
-        shared.esisecurity.update_token(sso_data)
-        if sso_data['expires_in'] <= 30:
-            tokens = shared.esisecurity.refresh()
-            data_to_update['tokens'] = tokens
-            delta_expire = timedelta(seconds=data_to_update['tokens']['expires_in'])
-            token_expire = datetime.utcnow() + delta_expire
-            data_to_update['tokens']['ExpiresOn'] = token_expire.strftime(datetime_format)
-        op = shared.esiapp.op['get_characters_character_id_wallet'](
-            character_id=user_doc['CharacterID']
-        )
-        wallet = shared.esiclient.request(op)
-        if wallet.status != 200:
-            print(wallet.data)
-            continue
-        data_to_update['wallet'] = wallet.data
-        last_update = datetime.fromtimestamp(user_doc.get('last_journal_update') or 0.0, timezone.utc)
-        now_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
-        if last_update + timedelta(hours=1) < now_utc:
-            new_journal_entries = process_journal(1, user_doc)
-            data_to_update['last_journal_update'] = now_utc.timestamp()
-            if len(new_journal_entries) > 0:
-                data_to_update['last_journal_entry'] = new_journal_entries[0]['id']
-                shared.db.journals.insert_many(new_journal_entries)
-            
-        character_filter = {'CharacterID': user_doc['CharacterID']}
-        update = {"$set": data_to_update}
-        shared.db.users.update_one(character_filter, update)
-    print(datetime.now())
-    print('done wallet refresh')
+        process_character(user_doc)
+    
+    logger.debug('done wallet refresh')
+    
+def process_character(user_doc):
+    if 'tokens' not in user_doc:
+        return
+    if 'Scopes' not in user_doc or user_doc['Scopes'] != 'esi-wallet.read_character_wallet.v1':
+        return
+    data_to_update = {}
+    access_token_expires = datetime.strptime(user_doc['tokens']['ExpiresOn'], datetime_format)
+    sso_data = {
+        'access_token': user_doc['tokens']['access_token'],
+        'refresh_token': user_doc['tokens']['refresh_token'],
+        'expires_in': (
+            access_token_expires - datetime.utcnow()
+        ).total_seconds()
+    }
+    shared.esisecurity.update_token(sso_data)
+    if sso_data['expires_in'] <= 30:
+        tokens = shared.esisecurity.refresh()
+        data_to_update['tokens'] = tokens
+        delta_expire = timedelta(seconds=data_to_update['tokens']['expires_in'])
+        token_expire = datetime.utcnow() + delta_expire
+        data_to_update['tokens']['ExpiresOn'] = token_expire.strftime(datetime_format)
+    op = shared.esiapp.op['get_characters_character_id_wallet'](
+        character_id=user_doc['CharacterID']
+    )
+    wallet = shared.esiclient.request(op)
+    if wallet.status != 200:
+        logger.error(wallet.data)
+        return
+    data_to_update['wallet'] = wallet.data
+    last_update = datetime.fromtimestamp(user_doc.get('last_journal_update') or 0.0, timezone.utc)
+    now_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
+    if last_update + timedelta(hours=1) < now_utc:
+        new_journal_entries = process_journal(1, user_doc)
+        data_to_update['last_journal_update'] = now_utc.timestamp()
+        if len(new_journal_entries) > 0:
+            data_to_update['last_journal_entry'] = new_journal_entries[0]['id']
+            shared.db.journals.insert_many(new_journal_entries)
+        
+    character_filter = {'CharacterID': user_doc['CharacterID']}
+    update = {"$set": data_to_update}
+    shared.db.users.update_one(character_filter, update)
         
 def process_journal(page, user_doc):
     last_journal_entry = user_doc.get('last_journal_entry') or 0
