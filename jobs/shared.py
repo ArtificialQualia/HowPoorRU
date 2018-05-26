@@ -26,7 +26,11 @@ def initialize_job():
     
     db = MongoClient(config.MONGO_HOST, config.MONGO_PORT)[config.MONGO_DBNAME]
     
-    esiapp = App.create(config.ESI_SWAGGER_JSON)
+    try:
+        esiapp = App.create(config.ESI_SWAGGER_JSON)
+    except error.HTTPError as e:
+        logger.error(e)
+        return
     
     # init the security object
     esisecurity = EsiSecurity(

@@ -81,16 +81,22 @@
       </table>
     </div>
     <div class="col">
+      {% for wallet_division in corp_data.wallets %}
       <div class="row">
-        <h1>
-          <span>Wallet Amount:</span>
-          {% if corp_data.wallet is not defined %}
-          <div>?</div>
-          {% else %}
-          <div class='positive-isk'>{{ '{0:0,.2f}'.format(corp_data.wallet) }} ISK</div>
-          {% endif %}
-        </h1>
+        <h6>
+          <span>Wallet Division {{ wallet_division.division }}:</span>
+          <span class='positive-isk'>{{ '{0:0,.2f}'.format(wallet_division.balance) }} ISK</span>
+        </h6>
       </div>
+      {% endfor %}
+      {% if corp_data.wallets_total is defined %}
+      <div class="row">
+        <h6 class="border-top">
+          <span>Wallets Total:</span>
+          <span class='positive-isk'>{{ '{0:0,.2f}'.format(corp_data.wallets_total) }} ISK</span>
+        </h6>
+      </div>
+      {% endif %}
     </div>
   </div>
   {% include 'journal_entries.html' %}

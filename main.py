@@ -144,6 +144,11 @@ def corporation(entity_id, page_number=1):
     conditional_decode(corp_data, 'ceo_')
     conditional_decode(corp_data, 'alliance_')
     
+    if 'wallets' in corp_data:
+        corp_data['wallets_total'] = 0
+        for wallet in (corp_data['wallets'] or None):
+            corp_data['wallets_total'] += wallet['balance']
+    
     # find all journal entries that this entity is involved in
     journal_search = {'$or':[ 
         {'first_party_id': entity_id},

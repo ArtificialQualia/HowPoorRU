@@ -22,6 +22,9 @@
 		    <th>Date</th>
 		    <th>Type</th>
 		    <th>Description</th>
+        {% if corp_data is defined %}
+	      <th>Wallet Division</th>
+        {% endif %}
 		    <th>First Party</th>
 		    <th>Second Party</th>
 	      {% if entity_id != None %}
@@ -63,6 +66,15 @@
 		    <td>{{ entry.date }}</td>
 		    <td>{{ entry.ref_type.replace('_', ' ') }}</td>
 		    <td>{{ entry.description }}</td>
+        {% if corp_data is defined %}
+          {% if (entity_name == entry.entity_id) and (entry.entity_wallet_division is defined) %}
+          <td>{{ entry.entity_wallet_division }}</td>
+          {% elif (entity_name == entry.entity_id_2) and (entry.entity_wallet_division_2 is defined) %}
+          <td>{{ entry.entity_wallet_division_2 }}</td>
+          {% else %}
+          <td>N/A</td>
+          {% endif %}
+        {% endif %}
 		    {% if entry.first_party_url != None %}
 		    <td>
 		      <a href='{{ entry.first_party_url }}' class="orange-link">{{ entry.first_party_id }}</a>
