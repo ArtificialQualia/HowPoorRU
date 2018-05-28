@@ -174,3 +174,65 @@ a.page-link:hover {
 .col-no-padding {
 	padding: 0px;
 }
+
+.searchbar {
+  background-color: rgba(120, 120, 120, 1);
+  color: white;
+  line-height: normal;
+  border: none;
+  margin-right: 4px;
+  font-size: 16px;
+}
+
+.searchbar input {
+	background-color: rgba(120, 120, 120, 1);
+	border: none;
+  padding: 4px;
+	color: lightgrey;
+}
+
+.searchbar input::placeholder {
+	color: darkgrey;
+}
+
+.searchbar button {
+	padding: 4px;
+	background-color: rgba(104, 104, 104, 1);
+	border: none;
+	color: black;
+}
+
+.autocomplete-items {
+  position: absolute;
+  border: 1px solid grey;
+  border-bottom: none;
+  z-index: 99;
+  /*position the autocomplete items to be the same width as the container:*/
+  width: 350px;
+  top: 100%;
+  left: -18px;
+}
+.autocomplete-items div {
+	text-align: left;
+  padding: 8px;
+  cursor: pointer;
+  background-color: black; 
+  border-bottom: 1px solid grey; 
+  white-space: pre;
+}
+.autocomplete-items div:hover {
+  /*when hovering an item:*/
+  background-color: rgba(104, 104, 104, 1);
+}
+.autocomplete-items div i {
+	color: grey;
+}
+.autocomplete-active {
+  /*when navigating through the items using the arrow keys:*/
+  background-color: DodgerBlue !important; 
+  color: white; 
+}
+
+.portrait {
+	margin-right:3px;
+}

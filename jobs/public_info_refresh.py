@@ -1,23 +1,26 @@
 from jobs import shared
 from jobs.shared import logger
 
-from datetime import datetime
 from datetime import timezone
 
 def update_all_public_info():
     logger.debug('start public info refresh')
     
     shared.initialize_job()
-    users_update()
-    alliances_update()
-    corps_update()
+    
+    entity_cursor = shared.db.entities.find({})
+    for entity_doc in entity_cursor:
+        if 'type' not in entity_doc:
+            logger.error('DB entry ' + entity_doc.id + ' does not have a type')
+            continue
+        elif entity_doc['type'] == 'user':
+            user_update(entity_doc['id'])
+        elif entity_doc['type'] == 'corporation':
+            corp_update(entity_doc['id'])
+        elif entity_doc['type'] == 'alliance':
+            alliance_update(entity_doc['id'])
     
     logger.debug('done public info refresh')
-
-def users_update():
-    user_cursor = shared.db.entities.find({})
-    for user_doc in user_cursor:
-        user_update(user_doc['id'])
         
 def user_update(character_id, data_to_update={}):
     op = shared.esiapp.op['get_characters_character_id'](
@@ -38,12 +41,6 @@ def user_update(character_id, data_to_update={}):
     character_filter = {'id': character_id}
     update = {"$set": data_to_update}
     shared.db.entities.update_one(character_filter, update)
-    
-        
-def corps_update():
-    corp_cursor = shared.db.corporations.find({})
-    for corp_doc in corp_cursor:
-        corp_update(corp_doc['id'])
         
 def corp_update(corporation_id, data_to_update={}):
     op = shared.esiapp.op['get_corporations_corporation_id'](
@@ -68,11 +65,6 @@ def corp_update(corporation_id, data_to_update={}):
     corporation_filter = {'id': corporation_id}
     update = {"$set": data_to_update}
     shared.db.entities.update_one(corporation_filter, update)
-        
-def alliances_update():
-    alliance_cursor = shared.db.alliances.find({})
-    for alliance_doc in alliance_cursor:
-        alliance_update(alliance_doc['id'])
         
 def alliance_update(alliance_id, data_to_update={}):
         op = shared.esiapp.op['get_alliances_alliance_id'](

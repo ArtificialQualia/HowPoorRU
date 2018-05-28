@@ -1,4 +1,5 @@
 import pymongo
+import bson
 
 from flask import Flask
 from flask import render_template
@@ -13,8 +14,8 @@ from app.flask_shared_modules import login_manager
 from app.flask_shared_modules import mongo
 from app.flask_shared_modules import scheduler
 
-import itertools
 import os
+import re
 from collections import OrderedDict
 
 # -----------------
@@ -76,6 +77,10 @@ def index(page_number=1, *args):
     # initialize empty journal_entries to ensure something gets passed to render_template
     journal_entries = []
     for entry in journal_cursor:
+        # if this corp wasn't the receiver of tax, then it had to pay out the tax
+        if 'tax' in entry:
+            entry['tax'] = entry['tax'] * -1
+            
         # turn common line items in journal entry into proper names and generated URLs
         conditional_decode(entry, 'tax_receiver_')
         conditional_decode(entry, 'first_party_')
@@ -251,7 +256,21 @@ def alliance(entity_id, page_number=1):
 def search():
     if 'search_string' not in request.form:
         abort(400)
-    return jsonify(request.form)
+    sanitized_string = '^(.*?)(' + re.escape(request.form['search_string']) + ')(.*)'
+    python_regex = re.compile(sanitized_string, re.IGNORECASE)
+    bson_regex = bson.regex.Regex.from_native(python_regex)
+    regex_find = {'name': bson_regex}
+    results = mongo.db.entities.find(regex_find)
+    limited_results = []
+    for result in results.limit(10):
+        one_result = [result['id']]
+        match = python_regex.match(result['name'])
+        bolded_name = match.group(1) + "<strong>" + match.group(2) + "</strong>" + match.group(3)
+        one_result.append(bolded_name)
+        one_result.append(result['type'])
+        one_result.append(url_for(result['type'], entity_id=result['id']))
+        limited_results.append(one_result)
+    return jsonify(limited_results)
 
 def page_range_check(page_number):
     """ returns a 404 if the page is outside the supported number of pages """

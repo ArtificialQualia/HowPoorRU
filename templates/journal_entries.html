@@ -48,12 +48,12 @@
          </td>
          {% else %}
           {% if entity_data is not defined %}
-            {% if entry.first_party_amount < 0 %}
-            <td class='negative-isk'>{{ '{0:0,.2f}'.format(entry.first_party_amount) }}</td>
-            {% elif entry.first_party_amount == 0.0 %}
+            {% if entry.second_party_amount < 0 %}
+            <td class='negative-isk'>{{ '{0:0,.2f}'.format(entry.second_party_amount) }}</td>
+            {% elif entry.second_party_amount == 0.0 %}
             <td><b>0.0</b></td>
             {% else %}
-            <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.first_party_amount) }}</td>
+            <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.second_party_amount) }}</td>
             {% endif %}
           {% elif entity_data.id == entry.first_party_id %}
             {% if entry.first_party_amount < 0 %}

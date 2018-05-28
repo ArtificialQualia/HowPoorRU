@@ -46,7 +46,7 @@ def process_corp(user_doc):
         update = {"$set": character_data_to_update}
         shared.db.entities.update_one(character_filter, update)
     
-    corp_filter = {'id': user_doc['id']}
+    corp_filter = {'id': user_doc['corporation_id']}
     corp_doc = shared.db.entities.find_one(corp_filter)
     
     corp_data_to_update = {}
@@ -56,7 +56,7 @@ def process_corp(user_doc):
     wallet = shared.esiclient.request(op)
     if wallet.status != 200:
         logger.error(wallet.data)
-        if 'error' in wallet.data and wallet.data['error'] == 'Character is not in the corporation':
+        if 'error' in wallet.data and wallet.data['error'] == 'Character does not have required role(s)':
             logger.error('Character ' + user_doc['name'] + 
                          ' does not seem to have roles to access corp wallet, removing read_corporation_wallets scope')
             data_to_update = {}
@@ -75,10 +75,10 @@ def process_corp(user_doc):
             journal_division_entries = process_journal(1, corp_doc, wallet_division)
             if len(journal_division_entries) > 0:
                 corp_data_to_update['last_journal_entry_' + str(wallet_division)] = journal_division_entries[0]['id']
-                try:
-                    shared.db.journals.insert_many(journal_division_entries, ordered=False)
-                except errors.BulkWriteError as e:
-                    logger.error(e)
+                for entry in journal_division_entries:
+                    id_filter = {'id': entry['id']}
+                    update = {'$set': entry}
+                    shared.db.journals.update_one(id_filter, update, upsert=True)
         corp_data_to_update['last_journal_update'] = now_utc.timestamp()
         
     corp_filter = {'id': corp_doc['id']}
@@ -106,10 +106,10 @@ def process_character(user_doc):
         data_to_update['last_journal_update'] = now_utc.timestamp()
         if len(new_journal_entries) > 0:
             data_to_update['last_journal_entry'] = new_journal_entries[0]['id']
-            try:
-                shared.db.journals.insert_many(new_journal_entries, ordered=False)
-            except errors.BulkWriteError as e:
-                logger.error(e)
+            for entry in new_journal_entries:
+                id_filter = {'id': entry['id']}
+                update = {'$set': entry}
+                shared.db.journals.update_one(id_filter, update, upsert=True)
         
     character_filter = {'id': user_doc['id']}
     update = {"$set": data_to_update}

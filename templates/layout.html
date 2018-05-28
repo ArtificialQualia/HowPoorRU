@@ -4,26 +4,35 @@
 	  {% block head %}
 	  <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
 		<link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fa-svg-with-js.css') }}">
 		<link rel="stylesheet" href="{{ url_for('static', filename='css/howpoorru.css') }}">
 		<script src="{{ url_for('static', filename='js/jquery-3.3.1.min.js') }}"></script>
 		<script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/jquery.doubleScroll.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/fontawesome-all.min.js') }}"></script>
 		<script src="{{ url_for('static', filename='js/table-helper.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/search.js') }}"></script>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		{% endblock %}
 	</head>
 	<body>
 	  <div id="bg" class="container-fluid" style="background-image: url('{{ url_for('static', filename='img/background.jpg') }}')">
 	    <div id="header" class="navbar row">
-        <div class="col-6">
+        <div class="col">
           <a href="/" id="logo" class="white-link">
 	          <img class="isk-img" src="{{ url_for('static', filename='img/isk.png') }}" />HowPoor.RU
 	        </a>
 	      </div>
-	      <div class="col-6 text-right" style="padding-right: 5px;">
+	      <div class="col col-auto text-right">
+			    <form class="searchbar" autocomplete="off">
+            <input class="autocomplete" id="autocomplete" type="text" placeholder="Search.." data-action="{{ url_for('search') }}">
+			      <button type="submit" disabled><i class="fas fa-search"></i></button>
+			    </form>
+        </div>
+        <div class="col col-auto text-right" style="padding-right: 5px;">
 	        {% if current_user.is_authenticated %}
 	        <a href="{{ url_for('character', entity_id=current_user.character_id) }}" class="white-link">
-		        <img src="https://image.eveonline.com/Character/{{ current_user.character_id }}_32.jpg" />{{ current_user.character_name }}
+		        <img class="portrait" src="https://image.eveonline.com/Character/{{ current_user.character_id }}_32.jpg" />{{ current_user.character_name }}
 		      </a>
 	        <span class="dropdown">
             <a href="#" class="dropdown-toggle white-link" data-toggle="dropdown"> <span class="caret"></span></a>
