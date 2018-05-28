@@ -13,7 +13,7 @@ def process_character_wallets():
     logger.debug('start character wallet refresh')
     shared.initialize_job()
 
-    user_cursor = shared.db.users.find({})
+    user_cursor = shared.db.entities.find({ 'tokens': { '$exists': True } })
     
     for user_doc in user_cursor:
         process_character(user_doc)
@@ -24,38 +24,47 @@ def process_corp_wallets():
     logger.debug('start corp wallet refresh')
     shared.initialize_job()
 
-    user_cursor = shared.db.users.find({})
-    
+    user_cursor = shared.db.entities.find({ '$and': [
+                                        {'tokens': { '$exists': True } },
+                                        {'corporation_id': { '$exists': True } }
+                                        ] })
     for user_doc in user_cursor:
         process_corp(user_doc)
     
     logger.debug('done corp wallet refresh')
     
 def process_corp(user_doc):
-    if 'tokens' not in user_doc or 'corporation_id' not in user_doc:
-        return
-    if ('Scopes' not in user_doc or
-            'esi-wallet.read_corporation_wallets.v1' not in user_doc['Scopes'].split(' ')):
+    if ('scopes' not in user_doc or
+            'esi-wallet.read_corporation_wallets.v1' not in user_doc['scopes'].split(' ')):
         return
     
     character_data_to_update = {}
     refresh_token(user_doc, character_data_to_update)
     
     if len(character_data_to_update) > 0:
-        character_filter = {'CharacterID': user_doc['CharacterID']}
+        character_filter = {'id': user_doc['id']}
         update = {"$set": character_data_to_update}
-        shared.db.users.update_one(character_filter, update)
+        shared.db.entities.update_one(character_filter, update)
     
-    corp_filter = {'corporation_id': user_doc['corporation_id']}
-    corp_doc = shared.db.corporations.find_one(corp_filter)
+    corp_filter = {'id': user_doc['id']}
+    corp_doc = shared.db.entities.find_one(corp_filter)
     
     corp_data_to_update = {}
     op = shared.esiapp.op['get_corporations_corporation_id_wallets'](
-        corporation_id=corp_doc['corporation_id']
+        corporation_id=corp_doc['id']
     )
     wallet = shared.esiclient.request(op)
     if wallet.status != 200:
         logger.error(wallet.data)
+        if 'error' in wallet.data and wallet.data['error'] == 'Character is not in the corporation':
+            logger.error('Character ' + user_doc['name'] + 
+                         ' does not seem to have roles to access corp wallet, removing read_corporation_wallets scope')
+            data_to_update = {}
+            data_to_update['scopes'] = user_doc['scopes'].replace('esi-wallet.read_corporation_wallets.v1', '')
+            data_to_update['scopes'] = data_to_update['scopes'].replace('  ', '').strip()
+            character_filter = {'id': user_doc['id']}
+            update = {"$set": data_to_update}
+            shared.db.entities.update_one(character_filter, update)
         return
     corp_data_to_update['wallets'] = wallet.data
     
@@ -63,29 +72,27 @@ def process_corp(user_doc):
     now_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
     if last_update + timedelta(hours=1) < now_utc:
         for wallet_division in range(1, 8):
-            journal_division_entries = process_corp_journal(1, corp_doc, wallet_division)
+            journal_division_entries = process_journal(1, corp_doc, wallet_division)
             if len(journal_division_entries) > 0:
-                corp_data_to_update['last_corp_journal_entry_' + str(wallet_division)] = journal_division_entries[0]['id']
+                corp_data_to_update['last_journal_entry_' + str(wallet_division)] = journal_division_entries[0]['id']
                 try:
                     shared.db.journals.insert_many(journal_division_entries, ordered=False)
                 except errors.BulkWriteError as e:
                     logger.error(e)
         corp_data_to_update['last_journal_update'] = now_utc.timestamp()
         
-    corp_filter = {'corporation_id': corp_doc['corporation_id']}
+    corp_filter = {'id': corp_doc['id']}
     update = {"$set": corp_data_to_update}
-    shared.db.corporations.update_one(corp_filter, update)
+    shared.db.entities.update_one(corp_filter, update)
     
 def process_character(user_doc):
-    if 'tokens' not in user_doc:
-        return
-    if ('Scopes' not in user_doc or
-            'esi-wallet.read_character_wallet.v1' not in user_doc['Scopes'].split(' ')):
+    if ('scopes' not in user_doc or
+            'esi-wallet.read_character_wallet.v1' not in user_doc['scopes'].split(' ')):
         return
     data_to_update = {}
     refresh_token(user_doc, data_to_update)
     op = shared.esiapp.op['get_characters_character_id_wallet'](
-        character_id=user_doc['CharacterID']
+        character_id=user_doc['id']
     )
     wallet = shared.esiclient.request(op)
     if wallet.status != 200:
@@ -104,9 +111,9 @@ def process_character(user_doc):
             except errors.BulkWriteError as e:
                 logger.error(e)
         
-    character_filter = {'CharacterID': user_doc['CharacterID']}
+    character_filter = {'id': user_doc['id']}
     update = {"$set": data_to_update}
-    shared.db.users.update_one(character_filter, update)
+    shared.db.entities.update_one(character_filter, update)
         
 def refresh_token(user_doc, data_to_update={}):
     access_token_expires = datetime.strptime(user_doc['tokens']['ExpiresOn'], datetime_format)
@@ -125,70 +132,48 @@ def refresh_token(user_doc, data_to_update={}):
         token_expire = datetime.utcnow() + delta_expire
         data_to_update['tokens']['ExpiresOn'] = token_expire.strftime(datetime_format)
 
-def process_journal(page, user_doc):
-    last_journal_entry = user_doc.get('last_journal_entry') or 0
-    op = shared.esiapp.op['get_characters_character_id_wallet_journal'](
-        character_id=user_doc['CharacterID'],
-        page=page
-    )
+def process_journal(page, entity_doc, division=None):
+    if division:
+        last_journal_entry = entity_doc.get('last_journal_entry_' + str(division)) or 0
+        op = shared.esiapp.op['get_corporations_corporation_id_wallets_division_journal'](
+            corporation_id=entity_doc['id'],
+            division=division,
+            page=page
+        )
+    else:
+        last_journal_entry = entity_doc.get('last_journal_entry') or 0
+        op = shared.esiapp.op['get_characters_character_id_wallet_journal'](
+            character_id=entity_doc['id'],
+            page=page
+        )
     journal = shared.esiclient.request(op)
     num_pages = int(journal.header['X-Pages'][0])
     new_journal_entries = []
     for journal_entry in journal.data:
         if journal_entry['id'] > last_journal_entry:
-            journal_entry['entity_id'] = user_doc['CharacterID']
-            duplicate_found = look_for_duplicate(journal_entry)
-            if duplicate_found:
-                continue
+            if journal_entry['first_party_id'] == entity_doc['id']:
+                journal_entry['first_party_balance'] = journal_entry.pop('balance')
+                journal_entry['first_party_amount'] = journal_entry.pop('amount')
+                journal_entry['second_party_amount'] = journal_entry['first_party_amount'] * -1
+                if division:
+                    journal_entry['first_party_wallet_division'] = division
+            elif journal_entry['second_party_id'] == entity_doc['id']:
+                journal_entry['second_party_balance'] = journal_entry.pop('balance')
+                journal_entry['second_party_amount'] = journal_entry.pop('amount')
+                journal_entry['first_party_amount'] = journal_entry['second_party_amount'] * -1
+                if division:
+                    journal_entry['second_party_wallet_division'] = division
+            else:
+                logger.error('Dont know what to do with: ' + str(journal_entry))
+                logger.error('Entity with error: ' + entity_doc['id'])
             decode_journal_entry(journal_entry)
             new_journal_entries.append(journal_entry)
         else:
             return new_journal_entries
     if page < num_pages:
-        next_pages_entries = process_journal(page+1, user_doc)
+        next_pages_entries = process_journal(page+1, entity_doc, division)
         return new_journal_entries.extend(next_pages_entries)
     return new_journal_entries
-
-def process_corp_journal(page, corp_doc, division):
-    last_journal_entry = corp_doc.get('last_corp_journal_entry_' + str(division)) or 0
-    op = shared.esiapp.op['get_corporations_corporation_id_wallets_division_journal'](
-        corporation_id=corp_doc['corporation_id'],
-        division=division,
-        page=page
-    )
-    journal = shared.esiclient.request(op)
-    num_pages = int(journal.header['X-Pages'][0])
-    new_journal_entries = []
-    for journal_entry in journal.data:
-        if journal_entry['id'] > last_journal_entry:
-            journal_entry['entity_id'] = corp_doc['corporation_id']
-            journal_entry['entity_wallet_division'] = division
-            duplicate_found = look_for_duplicate(journal_entry, division)
-            if duplicate_found:
-                continue
-            decode_journal_entry(journal_entry)
-            new_journal_entries.append(journal_entry)
-        else:
-            return new_journal_entries
-    if page < num_pages:
-        next_pages_entries = process_corp_journal(page+1, corp_doc, division)
-        return new_journal_entries.extend(next_pages_entries)
-    return new_journal_entries
-    
-def look_for_duplicate(journal_entry, division=None):
-    journal_filter = {'id': journal_entry['id']}
-    result = shared.db.journals.find_one(journal_filter)
-    if result is not None and result['entity_id'] != journal_entry['entity_id']:
-        update = { '$set': {
-                'balance_2': journal_entry['balance'],
-                'entity_id_2': journal_entry['entity_id']
-            }
-        }
-        if division:
-            update['$set']['entity_wallet_division_2'] = division
-        shared.db.journals.update_one(journal_filter, update)
-        return True
-    return False
     
 def decode_journal_entry(journal_entry):
     journal_entry['date'] = journal_entry['date'].v.replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %X")

@@ -1,56 +1,56 @@
 {% extends "layout.html" %}
 {% block head %}
   {{ super() }}
-  <title>{{ character_data.CharacterName }} - HowPoor.RU</title>
+  <title>{{ entity_data.name }} - HowPoor.RU</title>
 {% endblock %}
 {% block content %}
   <div class="row">
     <div class="col col-auto">
-	    <img src="https://image.eveonline.com/Character/{{ character_data.CharacterID }}_128.jpg" height="128" width="128" />
+	    <img src="https://image.eveonline.com/Character/{{ entity_data.id }}_128.jpg" height="128" width="128" />
 	  </div>
 	  <div class="col col-auto">
 	    <table class="table table-responsive character-table">
 	      <tr>
 				  <th scope="row">Name:</th>
 				  <td>
-					  <a href="{{ url_for('character', entity_id=character_data.CharacterID) }}" class="orange-link">
-					    {{ character_data.CharacterName }}
+					  <a href="{{ url_for('character', entity_id=entity_data.id) }}" class="orange-link">
+					    {{ entity_data.name }}
 					  </a>
 				  </td>
 			  </tr>
-			  {% if character_data.corporation_name is defined %}
+			  {% if entity_data.corporation_name is defined %}
 			  <tr>
 			    <th scope="row">Corporation:</th>
 	        <td>
-			    {% if character_data.corporation_url is defined %}
-				    <a href="{{ character_data.corporation_url }}" class="orange-link">
-				      {{ character_data.corporation_name }}
+			    {% if entity_data.corporation_url is defined %}
+				    <a href="{{ entity_data.corporation_url }}" class="orange-link">
+				      {{ entity_data.corporation_name }}
 				    </a>
 			    {% else %}
-			      {{ character_data.corporation_name }}
+			      {{ entity_data.corporation_name }}
 			    {% endif %}
 	        </td>
 		    </tr>
 		    {% endif %}
-		    {% if character_data.alliance_name is defined %}
+		    {% if entity_data.alliance_name is defined %}
 		    <tr>
 			    <th scope="row">Alliance:</th>
 	        <td>
-			    {% if character_data.corporation_url is defined %}
-				    <a href="{{ character_data.alliance_url }}" class="orange-link">
-				      {{ character_data.alliance_name }}
+			    {% if entity_data.corporation_url is defined %}
+				    <a href="{{ entity_data.alliance_url }}" class="orange-link">
+				      {{ entity_data.alliance_name }}
 				    </a>
 			    {% else %}
-			      {{ character_data.alliance_name }}
+			      {{ entity_data.alliance_name }}
 			    {% endif %}
 	        </td>
 		    </tr>
         {% endif %}
-        {% if character_data.birthday is defined %}
+        {% if entity_data.birthday is defined %}
         <tr>
           <th scope="row">Birthday:</th>
           <td>
-            {{ character_data.birthday }}
+            {{ entity_data.birthday }}
           </td>
         </tr>
         {% endif %}
@@ -60,10 +60,10 @@
 	    <div class="row">
 	      <h1>
 		      <span>Wallet Amount:</span>
-			    {% if character_data.wallet is not defined %}
+			    {% if entity_data.wallet is not defined %}
 			    <div>?</div>
 			    {% else %}
-			    <div class='positive-isk'>{{ '{0:0,.2f}'.format(character_data.wallet) }} ISK</div>
+			    <div class='positive-isk'>{{ '{0:0,.2f}'.format(entity_data.wallet) }} ISK</div>
 			    {% endif %}
 			  </h1>
 			</div>

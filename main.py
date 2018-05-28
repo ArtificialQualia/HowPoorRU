@@ -1,7 +1,11 @@
+import pymongo
+
 from flask import Flask
 from flask import render_template
 from flask import url_for
 from flask import abort
+from flask import request
+from flask import jsonify
 
 import config
 from app.sso import sso_pages
@@ -9,6 +13,7 @@ from app.flask_shared_modules import login_manager
 from app.flask_shared_modules import mongo
 from app.flask_shared_modules import scheduler
 
+import itertools
 import os
 from collections import OrderedDict
 
@@ -39,10 +44,12 @@ if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
 # create indexes in database, runs on every startup to prevent manual db setup
 # and ensure compliance
 with app.app_context():
-    mongo.db.users.create_index('CharacterID', unique=True)
-    mongo.db.corporations.create_index('corporation_id', unique=True)
-    mongo.db.alliances.create_index('alliance_id', unique=True)
-    mongo.db.journals.create_index('id', unique=True)
+    mongo.db.entities.create_index('id', unique=True)
+    mongo.db.journals.create_index([('id', pymongo.DESCENDING)], unique=True)
+    mongo.db.journals.create_index([('first_party_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True)
+    mongo.db.journals.create_index([('second_party_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True)
+    mongo.db.journals.create_index([('tax_receiver_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
+                                   partialFilterExpression={ 'tax_receiver_id': { '$exists': True } })
 
 app.register_blueprint(sso_pages)
 
@@ -70,7 +77,9 @@ def index(page_number=1, *args):
     journal_entries = []
     for entry in journal_cursor:
         # turn common line items in journal entry into proper names and generated URLs
-        decode_journal_parties(entry)
+        conditional_decode(entry, 'tax_receiver_')
+        conditional_decode(entry, 'first_party_')
+        conditional_decode(entry, 'second_party_')
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
@@ -87,8 +96,10 @@ def character(entity_id, page_number=1):
     page_range_check(page_number)
     
     # find user in database, or return a 404
-    character_filter = {'CharacterID': entity_id}
-    character_data = mongo.db.users.find_one_or_404(character_filter)
+    character_filter = {'id': entity_id}
+    character_data = mongo.db.entities.find_one_or_404(character_filter)
+    if character_data['type'] != 'character':
+        abort(404)
     
     # we turn special database fields into proper names and urls
     conditional_decode(character_data, 'corporation_')
@@ -114,20 +125,18 @@ def character(entity_id, page_number=1):
         # since this is a character, it pays tax not gains it
         if 'tax_receiver_id' in entry:
             entry['tax'] = entry['tax'] * -1
-        # this is triggered for when a database entry has multiple parties involved that have APIs
-        # 'amount' is negated because the second party in a entry has the opposite of amount applied to them
-        if entry['entity_id'] != entity_id:
-            entry['amount'] = entry['amount'] * -1
             
         # turn common line items in journal entry into proper names and generated URLs
-        decode_journal_parties(entry)
+        conditional_decode(entry, 'tax_receiver_')
+        conditional_decode(entry, 'first_party_')
+        conditional_decode(entry, 'second_party_')
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
         
         journal_entries.append(sorted_entry)
         
-    return render_template('character.html', character_data=character_data, journal_entries=journal_entries, page_number=page_number)
+    return render_template('character.html', entity_data=character_data, journal_entries=journal_entries, page_number=page_number)
 
 @app.route('/corporation/<int:entity_id>')
 @app.route('/corporation/<int:entity_id>/<int:page_number>')
@@ -137,8 +146,10 @@ def corporation(entity_id, page_number=1):
     page_range_check(page_number)
     
     # find user in database, or return a 404
-    corp_filter = {'corporation_id': entity_id}
-    corp_data = mongo.db.corporations.find_one_or_404(corp_filter)
+    corp_filter = {'id': entity_id}
+    corp_data = mongo.db.entities.find_one_or_404(corp_filter)
+    if corp_data['type'] != 'corporation':
+        abort(404)
     
     # we turn special database fields into proper names and urls
     conditional_decode(corp_data, 'ceo_')
@@ -167,23 +178,21 @@ def corporation(entity_id, page_number=1):
     # initialize empty journal_entries to ensure something gets passed to render_template
     journal_entries = []
     for entry in journal_cursor:
-        # this is triggered for when a database entry has multiple parties involved that have APIs
-        # 'amount' is negated because the second party in a entry has the opposite of amount applied to them
-        if entry['entity_id'] != entity_id:
-            entry['amount'] = entry['amount'] * -1
-            # if this corp wasn't the receiver of tax, then it had to pay out the tax
-            if 'tax' in entry and entry['tax_receiver_id'] != entity_id:
-                entry['tax'] = entry['tax'] * -1
+        # if this corp wasn't the receiver of tax, then it had to pay out the tax
+        if 'tax' in entry and entry['tax_receiver_id'] != entity_id:
+            entry['tax'] = entry['tax'] * -1
             
         # turn common line items in journal entry into proper names and generated URLs
-        decode_journal_parties(entry)
+        conditional_decode(entry, 'tax_receiver_')
+        conditional_decode(entry, 'first_party_')
+        conditional_decode(entry, 'second_party_')
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
         
         journal_entries.append(sorted_entry)
         
-    return render_template('corporation.html', corp_data=corp_data, journal_entries=journal_entries, page_number=page_number)
+    return render_template('corporation.html', entity_data=corp_data, journal_entries=journal_entries, page_number=page_number)
 
 @app.route('/alliance/<int:entity_id>')
 @app.route('/alliance/<int:entity_id>/<int:page_number>')
@@ -193,8 +202,10 @@ def alliance(entity_id, page_number=1):
     page_range_check(page_number)
     
     # find user in database, or return a 404
-    alliance_filter = {'alliance_id': entity_id}
-    alliance_data = mongo.db.alliances.find_one_or_404(alliance_filter)
+    alliance_filter = {'id': entity_id}
+    alliance_data = mongo.db.entities.find_one_or_404(alliance_filter)
+    if alliance_data['type'] != 'alliance':
+        abort(404)
     
     # if we don't have any corps from ESI yet, then there is no data to show
     if 'corps' not in alliance_data:
@@ -221,21 +232,26 @@ def alliance(entity_id, page_number=1):
     # initialize empty journal_entries to ensure something gets passed to render_template
     journal_entries = []
     for entry in journal_cursor:
-        # same logic as corp endpoint
-        if entry['entity_id'] not in alliance_data['corps']:
-            entry['amount'] = entry['amount'] * -1
-            if 'tax' in entry and entry['tax_receiver_id'] not in alliance_data['corps']:
-                entry['tax'] = entry['tax'] * -1
+        if 'tax' in entry and entry['tax_receiver_id'] not in alliance_data['corps']:
+            entry['tax'] = entry['tax'] * -1
             
         # turn common line items in journal entry into proper names and generated URLs
-        decode_journal_parties(entry)
+        conditional_decode(entry, 'tax_receiver_')
+        conditional_decode(entry, 'first_party_')
+        conditional_decode(entry, 'second_party_')
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
         
         journal_entries.append(sorted_entry)
         
-    return render_template('alliance.html', alliance_data=alliance_data, journal_entries=journal_entries, page_number=page_number)
+    return render_template('alliance.html', entity_data=alliance_data, journal_entries=journal_entries, page_number=page_number)
+
+@app.route('/search', methods=['POST'])
+def search():
+    if 'search_string' not in request.form:
+        abort(400)
+    return jsonify(request.form)
 
 def page_range_check(page_number):
     """ returns a 404 if the page is outside the supported number of pages """
@@ -246,17 +262,11 @@ def page_range_check(page_number):
 def conditional_decode(entry, id_prefix):
     """ helper to decode entity database ids to names and urls """
     if (id_prefix + 'id') in entry:
-        entry[id_prefix + 'name'], entry[id_prefix + 'url'] = decode_journal_party_id(entry[id_prefix + 'id'])
-
-def decode_journal_parties(entry):
-    """ helper to decode common journal entry fields into names and urls """
-    entry['entity_id'], entry['entity_url'] = decode_journal_party_id(entry['entity_id'])
-    if 'entity_id_2' in entry:
-        entry['entity_id_2'], entry['entity_url_2'] = decode_journal_party_id(entry['entity_id_2'])
-    entry['first_party_id'], entry['first_party_url'] = decode_journal_party_id(entry['first_party_id'])
-    entry['second_party_id'], entry['second_party_url']  = decode_journal_party_id(entry['second_party_id'])
-    if 'tax_receiver_id' in entry:
-        entry['tax_receiver_id'], entry['tax_receiver_url']  = decode_journal_party_id(entry['tax_receiver_id'])
+        id_filter = {'id': entry[id_prefix + 'id']}
+        result = mongo.db.entities.find_one(id_filter)
+        if result is not None:
+            entry[id_prefix + 'name'] = result['name']
+            entry[id_prefix + 'url'] = url_for(result['type'], entity_id=result['id'])
 
 def decode_journal_party_id(party_id):
     """ 
@@ -264,24 +274,14 @@ def decode_journal_party_id(party_id):
     
     Returns:
         Tuple (name_of_entity, url_for_entity)
-        if id can't be resolved, returns (original_id, None)
+        if id can't be resolved, returns (None, None)
     """
-    character_filter = {'CharacterID': party_id}
-    result = mongo.db.users.find_one(character_filter)
+    id_filter = {'id': party_id}
+    result = mongo.db.entities.find_one(id_filter)
     if result is not None:
-        return result['CharacterName'], url_for('character', entity_id=result['CharacterID'])
+        return result['name'], url_for(result['type'], entity_id=result['id'])
     
-    corp_filter = {'corporation_id': party_id}
-    result = mongo.db.corporations.find_one(corp_filter)
-    if result is not None:
-        return result['name'], url_for('corporation', entity_id=result['corporation_id'])
-    
-    alliance_filter = {'alliance_id': party_id}
-    result = mongo.db.alliances.find_one(alliance_filter)
-    if result is not None:
-        return result['name'], url_for('alliance', entity_id=result['alliance_id'])
-    
-    return party_id, None
+    return None, None
 
 if __name__ == '__main__':
     app.run(port=config.PORT, host=config.HOST)

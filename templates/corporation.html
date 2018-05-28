@@ -1,87 +1,87 @@
 {% extends "layout.html" %}
 {% block head %}
   {{ super() }}
-  <title>{{ corp_data.name }} - HowPoor.RU</title>
+  <title>{{ entity_data.name }} - HowPoor.RU</title>
 {% endblock %}
 {% block content %}
   <div class="row">
     <div class="col col-auto">
-      <img src="https://image.eveonline.com/Corporation/{{ corp_data.corporation_id }}_128.png" height="128" width="128" />
+      <img src="https://image.eveonline.com/Corporation/{{ entity_data.id }}_128.png" height="128" width="128" />
     </div>
     <div class="col col-auto">
       <table class="table table-responsive character-table">
         <tr>
           <th scope="row">Name:</th>
           <td>
-            <a href="{{ url_for('corporation', entity_id=corp_data.corporation_id) }}" class="orange-link">
-              {{ corp_data.name }}
+            <a href="{{ url_for('corporation', entity_id=entity_data.id) }}" class="orange-link">
+              {{ entity_data.name }}
             </a>
           </td>
         </tr>
-        {% if corp_data.ticker is defined %}
+        {% if entity_data.ticker is defined %}
         <tr>
           <th scope="row">Ticker:</th>
           <td>
-            {{ corp_data.ticker }}
+            {{ entity_data.ticker }}
           </td>
         </tr>
         {% endif %}
-        {% if corp_data.alliance_id is defined %}
+        {% if entity_data.alliance_id is defined %}
         <tr>
           <th scope="row">Alliance:</th>
           <td>
-          {% if corp_data.alliance_url is defined %}
-            <a href="{{ corp_data.alliance_url }}" class="orange-link">
-              {{ corp_data.alliance_name }}
+          {% if entity_data.alliance_url is defined %}
+            <a href="{{ entity_data.alliance_url }}" class="orange-link">
+              {{ entity_data.alliance_name }}
             </a>
           {% else %}
-            {{ corp_data.alliance_id }}
+            {{ entity_data.alliance_id }}
           {% endif %}
           </td>
         </tr>
         {% endif %}
-        {% if corp_data.ceo_id is defined %}
+        {% if entity_data.ceo_id is defined %}
         <tr>
           <th scope="row">CEO:</th>
           <td>
-          {% if corp_data.ceo_url is defined %}
-            <a href="{{ corp_data.ceo_url }}" class="orange-link">
-              {{ corp_data.ceo_name }}
+          {% if entity_data.ceo_url is defined %}
+            <a href="{{ entity_data.ceo_url }}" class="orange-link">
+              {{ entity_data.ceo_name }}
             </a>
           {% else %}
-            {{ corp_data.ceo_id }}
+            {{ entity_data.ceo_id }}
           {% endif %}
           </td>
         </tr>
         {% endif %}
-        {% if corp_data.member_count is defined %}
+        {% if entity_data.member_count is defined %}
         <tr>
           <th scope="row">Member Count:</th>
           <td>
-            {{ corp_data.member_count }}
+            {{ entity_data.member_count }}
           </td>
         </tr>
         {% endif %}
-        {% if corp_data.tax_rate is defined %}
+        {% if entity_data.tax_rate is defined %}
         <tr>
           <th scope="row">Tax Rate:</th>
           <td>
-            {{ corp_data.tax_rate * 100 }}%
+            {{ entity_data.tax_rate * 100 }}%
           </td>
         </tr>
         {% endif %}
-        {% if corp_data.date_founded is defined %}
+        {% if entity_data.date_founded is defined %}
         <tr>
           <th scope="row">Date Founded:</th>
           <td>
-            {{ corp_data.date_founded }}
+            {{ entity_data.date_founded }}
           </td>
         </tr>
         {% endif %}
       </table>
     </div>
     <div class="col">
-      {% for wallet_division in corp_data.wallets %}
+      {% for wallet_division in entity_data.wallets %}
       <div class="row">
         <h6>
           <span>Wallet Division {{ wallet_division.division }}:</span>
@@ -89,11 +89,11 @@
         </h6>
       </div>
       {% endfor %}
-      {% if corp_data.wallets_total is defined %}
+      {% if entity_data.wallets_total is defined %}
       <div class="row">
         <h6 class="border-top">
           <span>Wallets Total:</span>
-          <span class='positive-isk'>{{ '{0:0,.2f}'.format(corp_data.wallets_total) }} ISK</span>
+          <span class='positive-isk'>{{ '{0:0,.2f}'.format(entity_data.wallets_total) }} ISK</span>
         </h6>
       </div>
       {% endif %}

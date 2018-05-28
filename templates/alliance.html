@@ -1,50 +1,50 @@
 {% extends "layout.html" %}
 {% block head %}
   {{ super() }}
-  <title>{{ alliance_data.name }} - HowPoor.RU</title>
+  <title>{{ entity_data.name }} - HowPoor.RU</title>
 {% endblock %}
 {% block content %}
   <div class="row">
     <div class="col col-auto">
-      <img src="https://image.eveonline.com/Alliance/{{ alliance_data.alliance_id }}_128.png" height="128" width="128" />
+      <img src="https://image.eveonline.com/Alliance/{{ entity_data.id }}_128.png" height="128" width="128" />
     </div>
     <div class="col col-auto">
       <table class="table table-responsive character-table">
         <tr>
           <th scope="row">Name:</th>
           <td>
-            <a href="{{ url_for('alliance', entity_id=alliance_data.alliance_id) }}" class="orange-link">
-              {{ alliance_data.name }}
+            <a href="{{ url_for('alliance', entity_id=entity_data.id) }}" class="orange-link">
+              {{ entity_data.name }}
             </a>
           </td>
         </tr>
-        {% if alliance_data.ticker is defined %}
+        {% if entity_data.ticker is defined %}
         <tr>
           <th scope="row">Ticker:</th>
           <td>
-            {{ alliance_data.ticker }}
+            {{ entity_data.ticker }}
           </td>
         </tr>
         {% endif %}
-        {% if alliance_data.executor_corporation_id is defined %}
+        {% if entity_data.executor_corporation_id is defined %}
         <tr>
           <th scope="row">Executor Corp:</th>
           <td>
-          {% if alliance_data.executor_corporation_url is defined %}
-            <a href="{{ alliance_data.executor_corporation_url }}" class="orange-link">
-              {{ alliance_data.executor_corporation_name }}
+          {% if entity_data.executor_corporation_url is defined %}
+            <a href="{{ entity_data.executor_corporation_url }}" class="orange-link">
+              {{ entity_data.executor_corporation_name }}
             </a>
           {% else %}
-            {{ alliance_data.executor_corporation_id }}
+            {{ entity_data.executor_corporation_id }}
           {% endif %}
           </td>
         </tr>
         {% endif %}
-        {% if alliance_data.date_founded is defined %}
+        {% if entity_data.date_founded is defined %}
         <tr>
           <th scope="row">Date Founded:</th>
           <td>
-            {{ alliance_data.date_founded }}
+            {{ entity_data.date_founded }}
           </td>
         </tr>
         {% endif %}

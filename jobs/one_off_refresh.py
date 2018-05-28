@@ -17,8 +17,9 @@ def update_entity(character_id=None):
     if 'alliance_id' in retrieved_data:
         public_info_refresh.alliance_update(retrieved_data['alliance_id'])
         
-    character_filter = {'CharacterID': character_id}
-    user_doc = shared.db.users.find_one(character_filter)
+    character_filter = {'id': character_id}
+    user_doc = shared.db.entities.find_one(character_filter)
     wallet_refresh.process_character(user_doc)
+    wallet_refresh.process_corp(user_doc)
         
     logger.debug('finished one-off info refresh for ' + str(character_id))

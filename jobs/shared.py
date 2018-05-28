@@ -49,16 +49,8 @@ def initialize_job():
     )
 
 def decode_party_id(party_id):
-    character_filter = {'CharacterID': party_id}
-    corp_filter = {'corporation_id': party_id}
-    alliance_filter = {'alliance_id': party_id}
-    result = db.users.find_one(character_filter)
-    if result is not None:
-        return
-    result = db.corporations.find_one(corp_filter)
-    if result is not None:
-        return
-    result = db.alliances.find_one(alliance_filter)
+    id_filter = {'id': party_id}
+    result = db.entities.find_one(id_filter)
     if result is not None:
         return
     op = esiapp.op['get_characters_character_id'](
@@ -67,10 +59,11 @@ def decode_party_id(party_id):
     result = esiclient.request(op)
     if result.status == 200:
         db_entry = {
-            'CharacterName': result.data['name'],
-            'CharacterID': party_id
+            'name': result.data['name'],
+            'id': party_id,
+            'type': 'character'
         }
-        db.users.insert_one(db_entry)
+        db.entities.insert_one(db_entry)
         return
     op = esiapp.op['get_corporations_corporation_id'](
         corporation_id=party_id
@@ -79,9 +72,10 @@ def decode_party_id(party_id):
     if result.status == 200:
         db_entry = {
             'name': result.data['name'],
-            'corporation_id': party_id
+            'id': party_id,
+            'type': 'corporation'
         }
-        db.corporations.insert_one(db_entry)
+        db.entities.insert_one(db_entry)
         return
     op = esiapp.op['get_alliances_alliance_id'](
         alliance_id=party_id
@@ -90,8 +84,9 @@ def decode_party_id(party_id):
     if result.status == 200:
         db_entry = {
             'name': result.data['name'],
-            'alliance_id': party_id
+            'id': party_id,
+            'type': 'alliance'
         }
-        db.alliances.insert_one(db_entry)
+        db.entities.insert_one(db_entry)
         return
     logger.info('No character/corp/alliance found for: ' + str(party_id))
