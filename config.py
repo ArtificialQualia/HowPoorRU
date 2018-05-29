@@ -41,8 +41,8 @@ PERMANENT_SESSION_LIFETIME = datetime.timedelta(days=30)
 # -----------------------------------------------------
 JOBS = [
         {
-            'id': 'process_wallets',
-            'func': 'jobs.wallet_refresh:process_wallets',
+            'id': 'process_character_wallets',
+            'func': 'jobs.wallet_refresh:process_character_wallets',
             'trigger': 'interval',
             'seconds': 120
         },
