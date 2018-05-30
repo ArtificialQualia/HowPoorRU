@@ -38,6 +38,12 @@
             {% else %}
             <td>N/A</td>
             {% endif%}
+          {% elif entry.tax_receiver_id is defined and entity_data.id == entry.tax_receiver_id %}
+            {% if entry.tax_receiver_balance is defined %}
+            <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.tax_receiver_balance) }}</td>
+            {% else %}
+            <td>N/A</td>
+            {% endif%}
 	        {% else %}
           <td>N/A</td>
 	        {% endif %}
@@ -81,6 +87,8 @@
           <td>{{ entry.first_party_wallet_division }}</td>
           {% elif (entity_data.id == entry.second_party_id) and (entry.second_party_wallet_division is defined) %}
           <td>{{ entry.second_party_wallet_division }}</td>
+          {% elif (entry.tax_receiver_id is defined) and (entity_data.id == entry.tax_receiver_id) and (entry.tax_receiver_wallet_division is defined) %}
+          <td>{{ entry.tax_receiver_wallet_division }}</td>
           {% else %}
           <td>N/A</td>
           {% endif %}

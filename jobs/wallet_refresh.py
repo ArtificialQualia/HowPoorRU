@@ -11,7 +11,12 @@ datetime_format = "%Y-%m-%dT%X"
 
 def process_character_wallets():
     logger.debug('start character wallet refresh')
-    shared.initialize_job()
+    
+    try:
+        shared.initialize_job()
+    except Exception as e:
+        logger.error('Error with character wallet refresh: ' + str(e))
+        return
 
     user_cursor = shared.db.entities.find({ 'tokens': { '$exists': True } })
     
@@ -22,7 +27,12 @@ def process_character_wallets():
     
 def process_corp_wallets():
     logger.debug('start corp wallet refresh')
-    shared.initialize_job()
+    
+    try:
+        shared.initialize_job()
+    except Exception as e:
+        logger.error('Error with corp wallet refresh: ' + str(e))
+        return
 
     user_cursor = shared.db.entities.find({ '$and': [
                                         {'tokens': { '$exists': True } },
@@ -163,9 +173,14 @@ def process_journal(page, entity_doc, division=None):
                 journal_entry['first_party_amount'] = journal_entry['second_party_amount'] * -1
                 if division:
                     journal_entry['second_party_wallet_division'] = division
+            elif 'tax_receiver_id' in journal_entry and journal_entry['tax_receiver_id'] == entity_doc['id']:
+                journal_entry['tax_receiver_balance'] = journal_entry.pop('balance')
+                del journal_entry['amount']
+                if division:
+                    journal_entry['tax_receiver_wallet_division'] = division
             else:
                 logger.error('Dont know what to do with: ' + str(journal_entry))
-                logger.error('Entity with error: ' + entity_doc['id'])
+                logger.error('Entity with error: ' + str(entity_doc['id']))
             decode_journal_entry(journal_entry)
             new_journal_entries.append(journal_entry)
         else:

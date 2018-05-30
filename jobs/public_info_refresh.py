@@ -6,14 +6,18 @@ from datetime import timezone
 def update_all_public_info():
     logger.debug('start public info refresh')
     
-    shared.initialize_job()
+    try:
+        shared.initialize_job()
+    except Exception as e:
+        logger.error('Error with public info refresh: ' + str(e))
+        return
     
     entity_cursor = shared.db.entities.find({})
     for entity_doc in entity_cursor:
         if 'type' not in entity_doc:
             logger.error('DB entry ' + entity_doc.id + ' does not have a type')
             continue
-        elif entity_doc['type'] == 'user':
+        elif entity_doc['type'] == 'character':
             user_update(entity_doc['id'])
         elif entity_doc['type'] == 'corporation':
             corp_update(entity_doc['id'])

@@ -6,7 +6,11 @@ from jobs import wallet_refresh
 def update_entity(character_id=None):
     logger.debug('start one-off info refresh for ' + str(character_id))
     
-    shared.initialize_job()
+    try:
+        shared.initialize_job()
+    except Exception as e:
+        logger.error('Error with one-off info refresh: ' + str(e))
+        return
     
     retrieved_data = {}
     public_info_refresh.user_update(character_id, retrieved_data)
