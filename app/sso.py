@@ -21,7 +21,8 @@ from app.user import User
 from app.flask_shared_modules import login_manager
 from app.flask_shared_modules import mongo
 from app.flask_shared_modules import esisecurity
-from app.flask_shared_modules import scheduler
+from app.flask_shared_modules import rq
+from jobs import one_off_refresh
 
 sso_pages = Blueprint('sso_pages', __name__)
 
@@ -91,12 +92,9 @@ def callback():
     # create a user object from custom User class
     user = User(character_data=cdata, auth_response=auth_response, mongo=mongo)
     
-    # add one-off job to the scheduler to refresh ESI data for this character
-    public_info_job = scheduler.add_job('user_refresh_' + str(user.character_id), 
-                                        'jobs.one_off_refresh:update_entity',
-                                        args=(user.character_id,), next_run_time=None,
-                                        misfire_grace_time=10, replace_existing=True)
-    public_info_job.resume()
+    # add one-off job to the queue to refresh ESI data for this character
+    one_off_refresh.update_entity.queue(user.character_id, 
+                                        job_id="one_off_refresh-for-" + str(user.character_id))
 
     # register user with flask-login
     login_user(user)

@@ -1,7 +1,4 @@
 # -*- encoding: utf-8 -*-
-from apscheduler.jobstores.memory import MemoryJobStore
-from apscheduler.executors.pool import ProcessPoolExecutor
-from flask_apscheduler.auth import HTTPBasicAuth
 import datetime
 import logging
 
@@ -19,7 +16,7 @@ PAGE_SIZE = 25
 MONGO_HOST = 'localhost'
 MONGO_PORT = 27017
 MONGO_DBNAME = 'howpoorru'
-#MONGO_CONNECT = False
+MONGO_CONNECT = False
 
 # -----------------------------------------------------
 # ESI Configs
@@ -37,45 +34,7 @@ ESI_USER_AGENT = 'HowPoorRU by Demogorgon Asmodeous'
 PERMANENT_SESSION_LIFETIME = datetime.timedelta(days=30)
 
 # -----------------------------------------------------
-# APScheduler Configs
+# Job Configs (background processing)
 # -----------------------------------------------------
-JOBS = [
-        {
-            'id': 'process_character_wallets',
-            'func': 'jobs.wallet_refresh:process_character_wallets',
-            'trigger': 'interval',
-            'seconds': 120
-        },
-        {
-            'id': 'process_corp_wallets',
-            'func': 'jobs.wallet_refresh:process_corp_wallets',
-            'trigger': 'interval',
-            'seconds': 300
-        },
-        {
-            'id': 'update_all_public_info',
-            'func': 'jobs.public_info_refresh:update_all_public_info',
-            'trigger': 'interval',
-            'seconds': 3600
-        }
-    ]
-
-SCHEDULER_JOBSTORES = {
-    'default': MemoryJobStore()
-}
-
-SCHEDULER_EXECUTORS = {
-    'default': ProcessPoolExecutor(10)
-}
-
-SCHEDULER_JOB_DEFAULTS = {
-    'coalesce': True,
-    'max_instances': 1,
-    'misfire_grace_time': 5
-}
-
-SCHEDULER_AUTH = HTTPBasicAuth()
-SCHEDULER_AUTH_USER = 'REPLACE ME'
-SCHEDULER_AUTH_PASSWORD = 'REPLACE ME'
-SCHEDULER_API_ENABLED = True
-SCHEDULER_LOG_LEVEL = logging.DEBUG
+JOB_LOG_LEVEL = logging.INFO
+RQ_SCHEDULER_INTERVAL = 10

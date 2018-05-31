@@ -8,15 +8,20 @@ from flask import abort
 from flask import request
 from flask import jsonify
 
+from flask_rq2 import cli
+
+
 import config
 from app.sso import sso_pages
 from app.flask_shared_modules import login_manager
 from app.flask_shared_modules import mongo
-from app.flask_shared_modules import scheduler
+from app.flask_shared_modules import rq
+from jobs import wallet_refresh
+from jobs import public_info_refresh
 
-import os
 import re
 from collections import OrderedDict
+from datetime import datetime
 
 # -----------------
 # Globals for flask
@@ -32,25 +37,38 @@ mongo.init_app(app)
 # Initialize LoginManager, this for used for managing user sessions
 login_manager.init_app(app)
 
-# to prevent the background scheduler from running twice in Flask debug mode
-# ensure the Scheduler only starts on one Flask thread
-if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-    scheduler.init_app(app)
-    scheduler.start()
-    # set authentication credentials for password-protected scheduler API
-    @scheduler.authenticate
-    def authenticate(auth):
-        return auth['username'] == config.SCHEDULER_AUTH_USER and auth['password'] == config.SCHEDULER_AUTH_PASSWORD
+rq.init_app(app)
+#rq.init_cli(app)
+
+#rq_workers = []
+#for x in range(config.RQ_WORKER_COUNT):
+#    new_worker = cli.worker()
+#    rq_workers.append(new_worker)
+
+for job in rq.get_scheduler().get_jobs():
+    rq.get_scheduler().cancel(job)
+    job.cancel()
+
+wallet_refresh.process_character_wallets.schedule(datetime.utcnow(), job_id="process_character_wallets", interval=120, ttl=100)
+wallet_refresh.process_corp_wallets.schedule(datetime.utcnow(), job_id="process_corp_wallets", interval=300, ttl=240)
+public_info_refresh.update_all_public_info.schedule(datetime.utcnow(), job_id="update_all_public_info", interval=3600, ttl=600)
 
 # create indexes in database, runs on every startup to prevent manual db setup
 # and ensure compliance
-with app.app_context():
-    mongo.db.entities.create_index('id', unique=True)
-    mongo.db.journals.create_index([('id', pymongo.DESCENDING)], unique=True)
-    mongo.db.journals.create_index([('first_party_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True)
-    mongo.db.journals.create_index([('second_party_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True)
-    mongo.db.journals.create_index([('tax_receiver_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
-                                   partialFilterExpression={ 'tax_receiver_id': { '$exists': True } })
+try:
+    from uwsgidecorators import postfork
+    @postfork
+    def ensure_db_indexs():
+        with app.app_context():
+            mongo.db.entities.create_index('id', unique=True)
+            mongo.db.journals.create_index([('id', pymongo.DESCENDING)], unique=True)
+            mongo.db.journals.create_index([('first_party_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True)
+            mongo.db.journals.create_index([('second_party_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True)
+            mongo.db.journals.create_index([('tax_receiver_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
+                                           partialFilterExpression={ 'tax_receiver_id': { '$exists': True } })
+except ImportError as e:
+    print('can\'t import uwsgidecorators, this is probably a dev environment.  Please run DB setup manually')
+
 
 app.register_blueprint(sso_pages)
 

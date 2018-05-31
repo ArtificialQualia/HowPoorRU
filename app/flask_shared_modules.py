@@ -4,7 +4,7 @@ from esipy import EsiSecurity
 
 from flask_pymongo import PyMongo
 from flask_login import LoginManager
-from flask_apscheduler import APScheduler
+from flask_rq2 import RQ
 
 import config
 
@@ -34,4 +34,5 @@ esiclient = EsiClient(
     headers={'User-Agent': config.ESI_USER_AGENT}
 )
 
-scheduler = APScheduler()
+rq = RQ()
+rq.default_result_ttl = None

@@ -2,6 +2,7 @@ from pymongo import errors
 
 from jobs import shared
 from jobs.shared import logger
+from app.flask_shared_modules import rq
 
 from datetime import datetime
 from datetime import timedelta
@@ -9,39 +10,45 @@ from datetime import timezone
 
 datetime_format = "%Y-%m-%dT%X"
 
+@rq.job
 def process_character_wallets():
     logger.debug('start character wallet refresh')
     
     try:
         shared.initialize_job()
-    except Exception as e:
-        logger.error('Error with character wallet refresh: ' + str(e))
-        return
 
-    user_cursor = shared.db.entities.find({ 'tokens': { '$exists': True } })
-    
-    for user_doc in user_cursor:
-        process_character(user_doc)
+        user_cursor = shared.db.entities.find({ 'tokens': { '$exists': True } })
+        
+        for user_doc in user_cursor:
+            process_character(user_doc)
+
+        shared.cleanup_job()
+    except Exception as e:
+        logger.exception(e)
+        return
     
     logger.debug('done character wallet refresh')
     
+@rq.job
 def process_corp_wallets():
-    logger.debug('start corp wallet refresh')
-    
     try:
+        logger.debug('start corp wallet refresh')
+        
         shared.initialize_job()
-    except Exception as e:
-        logger.error('Error with corp wallet refresh: ' + str(e))
-        return
 
-    user_cursor = shared.db.entities.find({ '$and': [
-                                        {'tokens': { '$exists': True } },
-                                        {'corporation_id': { '$exists': True } }
-                                        ] })
-    for user_doc in user_cursor:
-        process_corp(user_doc)
+        user_cursor = shared.db.entities.find({ '$and': [
+                                            {'tokens': { '$exists': True } },
+                                            {'corporation_id': { '$exists': True } }
+                                            ] })
+        for user_doc in user_cursor:
+            process_corp(user_doc)
     
-    logger.debug('done corp wallet refresh')
+        logger.debug('done corp wallet refresh')
+
+        shared.cleanup_job()
+    except Exception as e:
+        logger.exception(e)
+        return
     
 def process_corp(user_doc):
     if ('scopes' not in user_doc or
@@ -65,7 +72,8 @@ def process_corp(user_doc):
     )
     wallet = shared.esiclient.request(op)
     if wallet.status != 200:
-        logger.error(wallet.data)
+        logger.error('status: ' + str(wallet.status) + ' error with getting corp wallet data: ' + str(wallet.data))
+        logger.error('error with getting corp wallet data: ' + str(corp_doc['id']))
         if 'error' in wallet.data and wallet.data['error'] == 'Character does not have required role(s)':
             logger.error('Character ' + user_doc['name'] + 
                          ' does not seem to have roles to access corp wallet, removing read_corporation_wallets scope')
@@ -106,7 +114,8 @@ def process_character(user_doc):
     )
     wallet = shared.esiclient.request(op)
     if wallet.status != 200:
-        logger.error(wallet.data)
+        logger.error('status: ' + str(wallet.status) + ' error with getting character wallet data: ' + str(wallet.data))
+        logger.error('error with getting character wallet data: ' + str(user_doc['id']))
         return
     data_to_update['wallet'] = wallet.data
     last_update = datetime.fromtimestamp(user_doc.get('last_journal_update') or 0.0, timezone.utc)
