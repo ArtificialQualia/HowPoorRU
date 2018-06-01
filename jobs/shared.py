@@ -1,13 +1,12 @@
 from pymongo import MongoClient
 
-from esipy import App
-from esipy import EsiClient
-from esipy import EsiSecurity
+from app.flask_shared_modules import esiapp
+from app.flask_shared_modules import esiclient
+from app.flask_shared_modules import esisecurity
 
 import config
 
 import logging
-import gc
 
 logger = logging.getLogger('jobs_logger')
 logger.setLevel(config.JOB_LOG_LEVEL)
@@ -17,49 +16,11 @@ formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s - %(message)s'
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
-def initialize_job():
-    global db
-    global esiapp
-    global esisecurity
-    global esiclient
-    
-    db = MongoClient(config.MONGO_HOST, config.MONGO_PORT)[config.MONGO_DBNAME]
-    
-    # Initialize ESI connection, all three below globals are needed to set up ESI connection
-    esiapp = App.create(config.ESI_SWAGGER_JSON)
-    
-    # init the security object
-    esisecurity = EsiSecurity(
-        app=esiapp,
-        redirect_uri=config.ESI_CALLBACK,
-        client_id=config.ESI_CLIENT_ID,
-        secret_key=config.ESI_SECRET_KEY,
-        headers={'User-Agent': config.ESI_USER_AGENT}
-    )
-    
-    # init the client
-    esiclient = EsiClient(
-        security=esisecurity,
-        cache=None,
-        headers={'User-Agent': config.ESI_USER_AGENT}
-    )
+db = MongoClient(config.MONGO_HOST, config.MONGO_PORT, connect=config.MONGO_CONNECT)[config.MONGO_DBNAME]
 
-def cleanup_job():
-    global esiclient
-    global esisecurity
-    global esiapp
-    global db
-    global logger
-    global ch
-    global formatter
-    del esiclient
-    del esisecurity
-    del esiapp
-    del db
-    del logger
-    del ch
-    del formatter
-    gc.collect()
+esiapp = esiapp
+esisecurity = esisecurity
+esiclient = esiclient
 
 def decode_party_id(party_id):
     id_filter = {'id': party_id}

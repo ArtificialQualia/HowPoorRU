@@ -9,8 +9,6 @@ def update_all_public_info():
     try:
         logger.debug('start public info refresh')
     
-        shared.initialize_job()
-    
         entity_cursor = shared.db.entities.find({})
         for entity_doc in entity_cursor:
             if 'type' not in entity_doc:
@@ -24,8 +22,6 @@ def update_all_public_info():
                 alliance_update(entity_doc['id'])
     
         logger.debug('done public info refresh')
-
-        shared.cleanup_job()
     except Exception as e:
         logger.exception(e)
         return

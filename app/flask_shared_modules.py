@@ -36,3 +36,4 @@ esiclient = EsiClient(
 
 rq = RQ()
 rq.default_result_ttl = None
+rq.default_timeout = config.DEFAULT_TIMEOUT

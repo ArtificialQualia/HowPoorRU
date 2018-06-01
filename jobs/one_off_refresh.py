@@ -9,8 +9,6 @@ def update_entity(character_id=None):
     try:
         logger.debug('start one-off info refresh for ' + str(character_id))
     
-        shared.initialize_job()
-    
         retrieved_data = {}
         public_info_refresh.user_update(character_id, retrieved_data)
         
@@ -26,8 +24,6 @@ def update_entity(character_id=None):
         wallet_refresh.process_corp(user_doc)
         
         logger.debug('finished one-off info refresh for ' + str(character_id))
-
-        shared.cleanup_job()
     except Exception as e:
         logger.exception(e)
         return

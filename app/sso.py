@@ -21,7 +21,6 @@ from app.user import User
 from app.flask_shared_modules import login_manager
 from app.flask_shared_modules import mongo
 from app.flask_shared_modules import esisecurity
-from app.flask_shared_modules import rq
 from jobs import one_off_refresh
 
 sso_pages = Blueprint('sso_pages', __name__)

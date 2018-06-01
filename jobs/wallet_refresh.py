@@ -12,29 +12,24 @@ datetime_format = "%Y-%m-%dT%X"
 
 @rq.job
 def process_character_wallets():
-    logger.debug('start character wallet refresh')
-    
     try:
-        shared.initialize_job()
+        logger.debug('start character wallet refresh')
 
         user_cursor = shared.db.entities.find({ 'tokens': { '$exists': True } })
         
         for user_doc in user_cursor:
             process_character(user_doc)
-
-        shared.cleanup_job()
+            
+        logger.debug('done character wallet refresh')
     except Exception as e:
         logger.exception(e)
         return
     
-    logger.debug('done character wallet refresh')
     
 @rq.job
 def process_corp_wallets():
     try:
         logger.debug('start corp wallet refresh')
-        
-        shared.initialize_job()
 
         user_cursor = shared.db.entities.find({ '$and': [
                                             {'tokens': { '$exists': True } },
@@ -44,8 +39,6 @@ def process_corp_wallets():
             process_corp(user_doc)
     
         logger.debug('done corp wallet refresh')
-
-        shared.cleanup_job()
     except Exception as e:
         logger.exception(e)
         return

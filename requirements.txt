@@ -4,3 +4,4 @@ Flask-PyMongo==0.5.1
 flask-login==0.4.1
 flask-rq2==18.0
 uwsgidecorators==1.1.0
+uwsgi==2.0.17
