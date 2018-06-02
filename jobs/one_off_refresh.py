@@ -9,17 +9,17 @@ def update_entity(character_id=None):
     try:
         logger.debug('start one-off info refresh for ' + str(character_id))
     
-        retrieved_data = {}
-        public_info_refresh.user_update(character_id, retrieved_data)
+        public_info_refresh.user_update(character_id)
         
-        if 'corporation_id' in retrieved_data:
-            public_info_refresh.corp_update(retrieved_data['corporation_id'])
-        
-        if 'alliance_id' in retrieved_data:
-            public_info_refresh.alliance_update(retrieved_data['alliance_id'])
-            
         character_filter = {'id': character_id}
         user_doc = shared.db.entities.find_one(character_filter)
+        
+        if 'corporation_id' in user_doc:
+            public_info_refresh.corp_update(user_doc['corporation_id'])
+        
+        if 'alliance_id' in user_doc:
+            public_info_refresh.alliance_update(user_doc['alliance_id'])
+            
         wallet_refresh.process_character(user_doc)
         wallet_refresh.process_corp(user_doc)
         

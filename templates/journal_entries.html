@@ -1,4 +1,41 @@
-{% include 'pagination.html' %}
+{% if request.view_args.tx_type is defined %}
+<div class="row"><br /></div>
+{% endif %}
+<div class="row border-bottom">
+  {% if request.view_args.tx_type is defined %}
+  <ul class="col col-auto align-items-end nav nav-tabs border-0">
+    <li class="nav-item">
+      {% if request.view_args.tx_type == 'all' %}
+      <a class="nav-link active" href="#">All</a>
+      {% else %}
+      <a class="nav-link" href="{{ url_for(request.endpoint, entity_id=request.view_args.entity_id, tx_type='all') }}">All</a>
+      {% endif %}
+    </li>
+    <li class="nav-item">
+      {% if request.view_args.tx_type == 'gains' %}
+      <a class="nav-link active" href="#">Gains</a>
+      {% else %}
+      <a class="nav-link" href="{{ url_for(request.endpoint, entity_id=request.view_args.entity_id, tx_type='gains') }}">Gains</a>
+      {% endif %}
+    </li>
+    <li class="nav-item">
+      {% if request.view_args.tx_type == 'losses' %}
+      <a class="nav-link active" href="#">Losses</a>
+      {% else %}
+      <a class="nav-link" href="{{ url_for(request.endpoint, entity_id=request.view_args.entity_id, tx_type='losses') }}">Losses</a>
+      {% endif %}
+    </li>
+    <li class="nav-item">
+      {% if request.view_args.tx_type == 'neutral' %}
+      <a class="nav-link active" href="#">Neutral</a>
+      {% else %}
+      <a class="nav-link" href="{{ url_for(request.endpoint, entity_id=request.view_args.entity_id, tx_type='neutral') }}">Neutral</a>
+      {% endif %}
+    </li>
+  </ul>
+  {% endif %}
+	{% include 'pagination.html' %}
+</div>
 <div class="double-scroll table-responsive">
 	<table class="table table-hover">
 	  <thead>
@@ -61,7 +98,7 @@
             {% else %}
             <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.second_party_amount) }}</td>
             {% endif %}
-          {% elif entity_data.id == entry.first_party_id %}
+          {% elif entity_data.id == entry.first_party_id or entry.first_party_id in entity_data.corps %}
             {% if entry.first_party_amount < 0 %}
             <td class='negative-isk'>{{ '{0:0,.2f}'.format(entry.first_party_amount) }}</td>
             {% elif entry.first_party_amount == 0.0 %}
@@ -69,7 +106,7 @@
             {% else %}
             <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.first_party_amount) }}</td>
             {% endif %}
-          {% elif entity_data.id == entry.second_party_id %}
+          {% elif entity_data.id == entry.second_party_id or entry.second_party_id in entity_data.corps %}
             {% if entry.second_party_amount < 0 %}
             <td class='negative-isk'>{{ '{0:0,.2f}'.format(entry.second_party_amount) }}</td>
             {% elif entry.second_party_amount == 0.0 %}

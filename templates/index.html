@@ -5,13 +5,28 @@
 {% endblock %}
 {% block content %}
   <div class="row">
-    <div class="col">
-      top wallet: {{ top_character.name }} {{ top_character.wallet }}
+    <div class="col border-left">
+      <h5>
+        Fattest Character
+        <div>
+          <a href="{{ top_character.url }}">{{ top_character.name }}</a> - 
+          <span class='positive-isk'>{{ '{0:0,.2f}'.format(top_character.wallet) }} ISK</span>
+        </div>
+      </h5>
     </div>
-    <div class="col">
-      top wallet: {{ top_corp.name }} {{ top_corp.wallet }}
+    <div class="col border-left">
+      <h5>
+        Fattest Corporation
+        <div>
+          <a href="{{ top_corp.url }}">{{ top_corp.name }}</a> - 
+          <span class='positive-isk'>{{ '{0:0,.2f}'.format(top_corp.wallet) }} ISK</span>
+        </div>
+      </h5>
     </div>
   </div>
-	<h3 class="text-center col">Latest Transactions</h3>
+  <div class="row"><br /></div>
+  <div class="row">
+	  <h3 class="text-center col">Latest Transactions:</h3>
+	</div>
   {% include 'journal_entries.html' %}
 {% endblock %}

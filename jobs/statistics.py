@@ -26,9 +26,8 @@ def update_top_corp_wallet():
                     }}
     max_wallet_projection = { '$project': { 
                                 'max_wallet': { 
-                                    '$max': 
-                                        ['$wallets.0', '$wallets.1', '$wallets.2', '$wallets.3',
-                                          '$wallets.4', '$wallets.5', '$wallets.6'] 
+                                    '$sum': 
+                                        '$wallets.balance'
                                 },
                                 'name': '$name',
                                 'id': '$id'

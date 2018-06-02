@@ -3,38 +3,43 @@
 {% else %}
 {% set entity_id = None %}
 {% endif %}
+{% if request.view_args.tx_type is defined %}
+{% set tx_type = request.view_args.tx_type %}
+{% else %}
+{% set tx_type = None %}
+{% endif %}
 <ul class="pagination col justify-content-end">
   {% if page_number == 1 %}
   <li class="page-item active"><a class="page-link" href="#">{{ page_number }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number+1) }}">{{ page_number + 1 }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number+2) }}">{{ page_number + 2 }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number+1) }}">&raquo;</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number+1) }}">{{ page_number + 1 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number+2) }}">{{ page_number + 2 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number+1) }}">&raquo;</a></li>
   {% elif page_number == 2 %}
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number-1) }}">&laquo;</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number-1) }}">{{ page_number - 1 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number-1) }}">&laquo;</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number-1) }}">{{ page_number - 1 }}</a></li>
   <li class="page-item active"><a class="page-link" href="#">{{ page_number }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number+1) }}">{{ page_number + 1 }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number+2) }}">{{ page_number + 2 }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number+1) }}">&raquo;</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number+1) }}">{{ page_number + 1 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number+2) }}">{{ page_number + 2 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number+1) }}">&raquo;</a></li>
   {% elif page_number == 9 %}
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number-1) }}">&laquo;</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number-2) }}">{{ page_number - 2 }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number-1) }}">{{ page_number - 1 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number-1) }}">&laquo;</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number-2) }}">{{ page_number - 2 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number-1) }}">{{ page_number - 1 }}</a></li>
   <li class="page-item active"><a class="page-link" href="#">{{ page_number }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number+1) }}">{{ page_number + 1 }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number+1) }}">&raquo;</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number+1) }}">{{ page_number + 1 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number+1) }}">&raquo;</a></li>
   {% elif page_number == 10 %}
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number-1) }}">&laquo;</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number-2) }}">{{ page_number - 2 }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number-1) }}">{{ page_number - 1 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number-1) }}">&laquo;</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number-2) }}">{{ page_number - 2 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number-1) }}">{{ page_number - 1 }}</a></li>
   <li class="page-item active"><a class="page-link" href="#">{{ page_number }}</a></li>
   {% else %}
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number-1) }}">&laquo;</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number-2) }}">{{ page_number - 2 }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number-1) }}">{{ page_number - 1 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number-1) }}">&laquo;</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number-2) }}">{{ page_number - 2 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number-1) }}">{{ page_number - 1 }}</a></li>
   <li class="page-item active"><a class="page-link" href="#">{{ page_number }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number+1) }}">{{ page_number + 1 }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number+2) }}">{{ page_number + 2 }}</a></li>
-  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, page_number=page_number+1) }}">&raquo;</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number+1) }}">{{ page_number + 1 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number+2) }}">{{ page_number + 2 }}</a></li>
+  <li class="page-item"><a class="page-link" href="{{ url_for(request.endpoint, entity_id=entity_id, tx_type=tx_type, page_number=page_number+1) }}">&raquo;</a></li>
   {% endif %}
 </ul>

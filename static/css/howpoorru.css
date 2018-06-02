@@ -45,6 +45,7 @@ td a div{
 #bg { 
 	min-height: 100vh;
 	min-width: 100%;
+  background-color: black;
 
   /* Center and scale the image nicely */
   background-attachment: fixed;
@@ -235,4 +236,10 @@ a.page-link:hover {
 
 .portrait {
 	margin-right:3px;
+}
+
+.nav-tabs .nav-link.active {
+	color: orange;
+	background-color: rgba(120, 120, 120, 0.7);
+	border-color: rgba(160, 160, 160, 1) rgba(160, 160, 160, 1) white;
 }

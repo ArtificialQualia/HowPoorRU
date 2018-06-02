@@ -26,7 +26,9 @@ def update_all_public_info():
         logger.exception(e)
         return
         
-def user_update(character_id, data_to_update={}):
+def user_update(character_id):
+    data_to_update = {}
+    data_to_remove = None
     op = shared.esiapp.op['get_characters_character_id'](
         character_id=character_id
     )
@@ -42,12 +44,18 @@ def user_update(character_id, data_to_update={}):
     if 'alliance_id' in public_data.data:
         data_to_update['alliance_id'] = public_data.data['alliance_id']
         shared.decode_party_id(data_to_update['alliance_id'])
+    else:
+        data_to_remove = {'alliance_id': 1}
     
     character_filter = {'id': character_id}
     update = {"$set": data_to_update}
+    if data_to_remove:
+        update['$unset'] = data_to_remove
     shared.db.entities.update_one(character_filter, update)
         
-def corp_update(corporation_id, data_to_update={}):
+def corp_update(corporation_id):
+    data_to_update = {}
+    data_to_remove = None
     op = shared.esiapp.op['get_corporations_corporation_id'](
         corporation_id=corporation_id
     )
@@ -65,14 +73,20 @@ def corp_update(corporation_id, data_to_update={}):
     if 'alliance_id' in public_data.data:
         data_to_update['alliance_id'] = public_data.data['alliance_id']
         shared.decode_party_id(data_to_update['alliance_id'])
+    else:
+        data_to_remove = {'alliance_id': 1}
     if 'date_founded' in public_data.data:
         data_to_update['date_founded'] = public_data.data['date_founded'].v.replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %X")
     
     corporation_filter = {'id': corporation_id}
     update = {"$set": data_to_update}
+    if data_to_remove:
+        update['$unset'] = data_to_remove
     shared.db.entities.update_one(corporation_filter, update)
+    del data_to_update
         
-def alliance_update(alliance_id, data_to_update={}):
+def alliance_update(alliance_id):
+    data_to_update = {}
     op = shared.esiapp.op['get_alliances_alliance_id'](
         alliance_id=alliance_id
     )

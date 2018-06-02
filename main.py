@@ -110,24 +110,26 @@ def index(page_number=1, *args):
         journal_entries.append(sorted_entry)
         
     top_character_bytes = r.hgetall('top_character_wallet')
-    top_character = {}
-    for key, value in top_character_bytes.items():
-        top_character[key.decode('utf-8')] = value.decode('utf-8')
+    top_character = redis_bytes_to_data(top_character_bytes)
+    top_character['url'] = url_for('character', entity_id=top_character['id'])
         
     top_corp_bytes = r.hgetall('top_corp_wallet')
-    top_corp = {}
-    print(top_corp_bytes)
-    for key, value in top_corp_bytes.items():
-        top_corp[key.decode('utf-8')] = value.decode('utf-8')
+    top_corp = redis_bytes_to_data(top_corp_bytes)
+    top_corp['url'] = url_for('corporation', entity_id=top_corp['id'])
+    
     return render_template('index.html', journal_entries=journal_entries, page_number=page_number,
                            top_character=top_character, top_corp=top_corp)
 
 @app.route('/character/<int:entity_id>')
 @app.route('/character/<int:entity_id>/<int:page_number>')
-def character(entity_id, page_number=1):
+@app.route('/character/<int:entity_id>/<tx_type>')
+@app.route('/character/<int:entity_id>/<tx_type>/<int:page_number>')
+def character(entity_id, page_number=1, tx_type='all'):
     """ paginated character page, has character details and journal entries """
     # ensure page is in valid range
     page_range_check(page_number)
+    
+    request.view_args['tx_type'] = tx_type
     
     # find user in database, or return a 404
     character_filter = {'id': entity_id}
@@ -140,10 +142,7 @@ def character(entity_id, page_number=1):
     conditional_decode(character_data, 'alliance_')
     
     # find all journal entries that this entity is involved in
-    journal_search = {'$or':[ 
-        {'first_party_id': entity_id},
-        {'second_party_id': entity_id}
-    ]}
+    journal_search = make_entity_filter(entity_id, tx_type)
     journal_cursor = mongo.db.journals.find(journal_search)
     
     # calculate number of entries to skip in database
@@ -174,10 +173,14 @@ def character(entity_id, page_number=1):
 
 @app.route('/corporation/<int:entity_id>')
 @app.route('/corporation/<int:entity_id>/<int:page_number>')
-def corporation(entity_id, page_number=1):
+@app.route('/corporation/<int:entity_id>/<tx_type>')
+@app.route('/corporation/<int:entity_id>/<tx_type>/<int:page_number>')
+def corporation(entity_id, page_number=1, tx_type='all'):
     """ paginated corporation page, has corp details and journal entries """
     # ensure page is in valid range
     page_range_check(page_number)
+    
+    request.view_args['tx_type'] = tx_type
     
     # find user in database, or return a 404
     corp_filter = {'id': entity_id}
@@ -195,11 +198,7 @@ def corporation(entity_id, page_number=1):
             corp_data['wallets_total'] += wallet['balance']
     
     # find all journal entries that this entity is involved in
-    journal_search = {'$or':[ 
-        {'first_party_id': entity_id},
-        {'second_party_id': entity_id},
-        {'tax_receiver_id': entity_id}
-    ]}
+    journal_search = make_entity_filter(entity_id, tx_type)
     journal_cursor = mongo.db.journals.find(journal_search)
     
     # calculate number of entries to skip in database
@@ -230,10 +229,14 @@ def corporation(entity_id, page_number=1):
 
 @app.route('/alliance/<int:entity_id>')
 @app.route('/alliance/<int:entity_id>/<int:page_number>')
-def alliance(entity_id, page_number=1):
+@app.route('/alliance/<int:entity_id>/<tx_type>')
+@app.route('/alliance/<int:entity_id>/<tx_type>/<int:page_number>')
+def alliance(entity_id, page_number=1, tx_type='all'):
     """ paginated alliance page, has alliance details and journal entries from all corps """
     # ensure page is in valid range
     page_range_check(page_number)
+    
+    request.view_args['tx_type'] = tx_type
     
     # find user in database, or return a 404
     alliance_filter = {'id': entity_id}
@@ -249,11 +252,7 @@ def alliance(entity_id, page_number=1):
     conditional_decode(alliance_data, 'executor_corporation_')
     
     # find all journal entries that this entity's corps are involved in
-    journal_search = {'$or':[ 
-        {'first_party_id': { '$in': alliance_data['corps'] } },
-        {'second_party_id': { '$in': alliance_data['corps'] } },
-        {'tax_receiver_id': { '$in': alliance_data['corps'] } }
-    ]}
+    journal_search = make_entity_filter({ '$in': alliance_data['corps'] }, tx_type)
     journal_cursor = mongo.db.journals.find(journal_search)
     
     # calculate number of entries to skip in database
@@ -330,6 +329,41 @@ def decode_journal_party_id(party_id):
         return result['name'], url_for(result['type'], entity_id=result['id'])
     
     return None, None
+
+def redis_bytes_to_data(redis_object):
+    decoded_object = {}
+    for key, value in redis_object.items():
+        if key.decode('utf-8') == 'wallet':
+            decoded_object[key.decode('utf-8')] = float(value.decode('utf-8'))
+        else:
+            decoded_object[key.decode('utf-8')] = value.decode('utf-8')
+    return decoded_object
+
+def make_entity_filter(entity_filter, tx_type):
+    journal_search = {}
+    if tx_type == 'all':
+        journal_search = {'$or':[ 
+            {'first_party_id': entity_filter},
+            {'second_party_id': entity_filter},
+            {'tax_receiver_id': entity_filter}
+        ]}
+    elif tx_type == 'gains':
+        journal_search = {'$or':[ 
+            {'$and': [{'first_party_id': entity_filter}, {'first_party_amount': {'$gt': 0}}]},
+            {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$gt': 0}}]},
+            {'tax_receiver_id': entity_filter}
+        ]}
+    elif tx_type == 'losses':
+        journal_search = {'$or':[ 
+            {'$and': [{'first_party_id': entity_filter}, {'first_party_amount': {'$lt': 0}}]},
+            {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$lt': 0}}]}
+        ]}
+    elif tx_type == 'neutral':
+        journal_search = {'$or':[ 
+            {'$and': [{'first_party_id': entity_filter}, {'first_party_amount': {'$eq': 0}}]},
+            {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$eq': 0}}]}
+        ]}
+    return journal_search
 
 if __name__ == '__main__':
     app.run(port=config.PORT, host=config.HOST)
