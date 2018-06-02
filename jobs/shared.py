@@ -4,6 +4,8 @@ from app.flask_shared_modules import esiapp
 from app.flask_shared_modules import esiclient
 from app.flask_shared_modules import esisecurity
 
+import redis
+
 import config
 
 import logging

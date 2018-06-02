@@ -6,6 +6,8 @@ from flask_pymongo import PyMongo
 from flask_login import LoginManager
 from flask_rq2 import RQ
 
+import redis
+
 import config
 
 # define mongo global for other modules
@@ -37,3 +39,5 @@ esiclient = EsiClient(
 rq = RQ()
 rq.default_result_ttl = None
 rq.default_timeout = config.DEFAULT_TIMEOUT
+
+r = redis.StrictRedis(host=config.REDIS_URL, port=config.REDIS_PORT, db=0)

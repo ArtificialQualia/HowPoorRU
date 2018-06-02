@@ -4,6 +4,14 @@
   <title>Index - HowPoor.RU</title>
 {% endblock %}
 {% block content %}
+  <div class="row">
+    <div class="col">
+      top wallet: {{ top_character.name }} {{ top_character.wallet }}
+    </div>
+    <div class="col">
+      top wallet: {{ top_corp.name }} {{ top_corp.wallet }}
+    </div>
+  </div>
 	<h3 class="text-center col">Latest Transactions</h3>
   {% include 'journal_entries.html' %}
 {% endblock %}

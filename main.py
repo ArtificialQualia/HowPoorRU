@@ -8,16 +8,15 @@ from flask import abort
 from flask import request
 from flask import jsonify
 
-from flask_rq2 import cli
-
-
 import config
 from app.sso import sso_pages
 from app.flask_shared_modules import login_manager
 from app.flask_shared_modules import mongo
 from app.flask_shared_modules import rq
+from app.flask_shared_modules import r
 from jobs import wallet_refresh
 from jobs import public_info_refresh
+from jobs import statistics
 
 import re
 from collections import OrderedDict
@@ -49,6 +48,7 @@ for job in rq.get_scheduler().get_jobs():
     rq.get_scheduler().cancel(job)
     job.cancel()
 
+statistics.update_statistics.schedule(datetime.utcnow(), job_id="update_statistics", interval=62, ttl=61)
 wallet_refresh.process_character_wallets.schedule(datetime.utcnow(), job_id="process_character_wallets", interval=120, ttl=100)
 wallet_refresh.process_corp_wallets.schedule(datetime.utcnow(), job_id="process_corp_wallets", interval=300, ttl=240)
 public_info_refresh.update_all_public_info.schedule(datetime.utcnow(), job_id="update_all_public_info", interval=3600, ttl=600)
@@ -67,7 +67,7 @@ try:
             mongo.db.journals.create_index([('tax_receiver_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
                                            partialFilterExpression={ 'tax_receiver_id': { '$exists': True } })
 except ImportError as e:
-    print('can\'t import uwsgidecorators, this is probably a dev environment.  Please run DB setup manually')
+    print('can\'t import uwsgidecorators, if this is a dev environment, please run DB setup manually')
 
 
 app.register_blueprint(sso_pages)
@@ -109,7 +109,18 @@ def index(page_number=1, *args):
         
         journal_entries.append(sorted_entry)
         
-    return render_template('index.html', journal_entries=journal_entries, page_number=page_number)
+    top_character_bytes = r.hgetall('top_character_wallet')
+    top_character = {}
+    for key, value in top_character_bytes.items():
+        top_character[key.decode('utf-8')] = value.decode('utf-8')
+        
+    top_corp_bytes = r.hgetall('top_corp_wallet')
+    top_corp = {}
+    print(top_corp_bytes)
+    for key, value in top_corp_bytes.items():
+        top_corp[key.decode('utf-8')] = value.decode('utf-8')
+    return render_template('index.html', journal_entries=journal_entries, page_number=page_number,
+                           top_character=top_character, top_corp=top_corp)
 
 @app.route('/character/<int:entity_id>')
 @app.route('/character/<int:entity_id>/<int:page_number>')
