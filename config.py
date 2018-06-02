@@ -38,3 +38,10 @@ PERMANENT_SESSION_LIFETIME = datetime.timedelta(days=30)
 # -----------------------------------------------------
 JOB_LOG_LEVEL = logging.INFO
 RQ_SCHEDULER_INTERVAL = 10
+DEFAULT_TIMEOUT = 1800
+
+# -----------------------------------------------------
+# Redis Configs
+# -----------------------------------------------------
+REDIS_URL = 'localhost'
+REDIS_PORT = 6379
