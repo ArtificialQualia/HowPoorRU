@@ -8,6 +8,9 @@ from flask import abort
 from flask import request
 from flask import jsonify
 
+from flask_login import current_user
+from flask_login import login_required
+
 import config
 from app.sso import sso_pages
 from app.flask_shared_modules import login_manager
@@ -299,6 +302,27 @@ def search():
         one_result.append(url_for(result['type'], entity_id=result['id']))
         limited_results.append(one_result)
     return jsonify(limited_results)
+
+@app.route('/account')
+@login_required
+def account():
+    character_filter = {'id': current_user.character_id}
+    character_data = mongo.db.entities.find_one_or_404(character_filter)
+    scopes_list = character_data['scopes'].split()
+    
+    remove_scope = request.args.get('remove_scope')
+    if remove_scope is not None:
+        data_to_update = {}
+        for scope in scopes_list:
+            if scope == remove_scope:
+                scopes_list.remove(scope)
+        data_to_update['scopes'] = " ".join(scopes_list)
+        update = {"$set": data_to_update}
+        character_data = mongo.db.entities.find_one_and_update(character_filter, update, return_document=pymongo.ReturnDocument.AFTER)
+        scopes_list = character_data['scopes'].split()
+    
+    character_data['scopes'] = scopes_list
+    return render_template('account.html', user=character_data)
 
 def page_range_check(page_number):
     """ returns a 404 if the page is outside the supported number of pages """

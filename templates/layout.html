@@ -37,7 +37,8 @@
 	        <span class="dropdown">
             <a href="#" class="dropdown-toggle white-link" data-toggle="dropdown"> <span class="caret"></span></a>
             <ul class="dropdown-menu dropdown-menu-right logout-dropdown">
-              <a href="{{ url_for('sso_pages.logout') }}" class="white-link"> Logout</a>
+              <li class="border-bottom border-dark"><a href="{{ url_for('account') }}" class="white-link"> Account</a></li>
+              <li><a href="{{ url_for('sso_pages.logout') }}" class="white-link"> Logout</a></li>
             </ul>
           </span>
 	        {% else %}

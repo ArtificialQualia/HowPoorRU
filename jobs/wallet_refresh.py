@@ -159,6 +159,10 @@ def process_journal(page, entity_doc, division=None):
             page=page
         )
     journal = shared.esiclient.request(op)
+    if journal.status != 200:
+        logger.error('status: ' + str(journal.status) + ' error with getting journal data: ' + str(journal.data))
+        logger.error('error with getting journal data: ' + str(entity_doc['id']))
+        return
     num_pages = int(journal.header['X-Pages'][0])
     new_journal_entries = []
     for journal_entry in journal.data:

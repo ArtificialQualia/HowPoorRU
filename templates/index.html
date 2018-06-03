@@ -4,24 +4,30 @@
   <title>Index - HowPoor.RU</title>
 {% endblock %}
 {% block content %}
-  <div class="row">
-    <div class="col border-left">
-      <h5>
-        Fattest Character
-        <div>
-          <a href="{{ top_character.url }}">{{ top_character.name }}</a> - 
-          <span class='positive-isk'>{{ '{0:0,.2f}'.format(top_character.wallet) }} ISK</span>
-        </div>
-      </h5>
+  <div class="row align-items-center border-bottom border-dark">
+    <div class="col col-auto p-0">
+      <img class="portrait" src="https://image.eveonline.com/Character/{{ top_character.id }}_64.jpg" />
     </div>
-    <div class="col border-left">
-      <h5>
-        Fattest Corporation
-        <div>
-          <a href="{{ top_corp.url }}">{{ top_corp.name }}</a> - 
-          <span class='positive-isk'>{{ '{0:0,.2f}'.format(top_corp.wallet) }} ISK</span>
-        </div>
-      </h5>
+    <div class="col p-0">
+     <h5 class="m-0">
+       Fattest Character
+       <br />
+       <a href="{{ top_character.url }}">{{ top_character.name }}</a>
+       <br />
+       <span class='positive-isk'>{{ '{0:0,.2f}'.format(top_character.wallet) }} ISK</span>
+     </h5>
+    </div>
+    <div class="col col-auto p-0">
+      <img class="portrait" src="https://image.eveonline.com/Corporation/{{ top_corp.id }}_64.png" />
+    </div>
+    <div class="col p-0">
+     <h5 class="m-0">
+       Fattest Corporation
+       <br />
+       <a href="{{ top_corp.url }}">{{ top_corp.name }}</a>
+       <br />
+       <span class='positive-isk'>{{ '{0:0,.2f}'.format(top_corp.wallet) }} ISK</span>
+     </h5>
     </div>
   </div>
   <div class="row"><br /></div>

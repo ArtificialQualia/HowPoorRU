@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+  <title>Account Management - HowPoor.RU</title>
+{% endblock %}
+{% block content %}
+  <div class="row col text-center border-bottom border-dark">
+    <h3 class="w-100">Account Management</h3>
+  </div>
+  <div class="row">
+    <h5>API (ESI) Permissions Management</h6>
+  </div>
+  {% if user.scopes is not defined or user.scopes|length < 1 %}
+  <div class="row">
+    <h6>ESI Tokens have no permissions</h6>
+  </div>
+  {% else %}
+  <div class="row">
+    <h6>Scopes:</h6>
+    <table class="table table-responsive">
+	    <tbody>
+	      {% for entry in user.scopes %}
+	      <tr>
+	        <td class="align-middle">{{ entry }}</td>
+	        <td><a class="btn btn-danger white-link" href="{{ url_for('account', remove_scope=entry) }}">Remove</a></td>
+	      </tr>
+	      {% endfor %}
+	    </tbody>
+    </table>
+  </div>
+  {% endif %}
+{% endblock %}
