@@ -8,6 +8,8 @@ from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 
+from jobs import public_info_refresh
+
 datetime_format = "%Y-%m-%dT%X"
 
 @rq.job
@@ -198,8 +200,152 @@ def process_journal(page, entity_doc, division=None):
     
 def decode_journal_entry(journal_entry):
     journal_entry['date'] = journal_entry['date'].v.replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %X")
-    shared.decode_party_id(journal_entry['first_party_id'])
-    shared.decode_party_id(journal_entry['second_party_id'])
-    if 'tax_receiver_id' in journal_entry:
-        shared.decode_party_id(journal_entry['tax_receiver_id'])
     
+    special = shared.decode_party_id(journal_entry['first_party_id'])
+    if special:
+        journal_entry['first_party_id'] = special
+        
+    special = shared.decode_party_id(journal_entry['second_party_id'])
+    if special:
+        journal_entry['second_party_id'] = special
+        
+    if 'tax_receiver_id' in journal_entry:
+        special = shared.decode_party_id(journal_entry['tax_receiver_id'])
+        if special:
+            journal_entry['tax_receiver_id'] = special
+            
+    decode_context_id(journal_entry['context_id'], journal_entry['context_id_type'])
+    
+def decode_context_id(context_id, context_id_type):
+    id_filter = {'id': context_id}
+    result = shared.db.entities.find_one(id_filter)
+    if result is not None:
+        return
+    
+    if context_id == 'character_id':
+        shared.user_update(context_id)
+    elif context_id == 'corporation_id':
+        shared.corp_update(context_id)
+    elif context_id == 'system_id':
+        update_system(context_id)
+    elif context_id == 'eve_system':
+        update_ship(context_id)
+    else:
+        return
+    
+def update_system(system_id):
+    data_to_update = {}
+    data_to_update['id'] = system_id
+    data_to_update['type'] = 'system'
+    op = shared.esiapp.op['get_universe_systems_system_id'](
+        system_id=system_id
+    )
+    public_data = shared.esiclient.request(op)
+    if public_data.status != 200:
+        logger.error('status: ' + str(public_data.status) + ' error with getting system data: ' + str(public_data.data))
+        logger.error('system with error: ' + str(system_id))
+        return
+    data_to_update['name'] = public_data.data['name']
+    data_to_update['security_status'] = public_data.data['security_status']
+    data_to_update['constellation_id'] = public_data.data['constellation_id']
+    
+    id_filter = {'id': public_data.data['constellation_id']}
+    result = shared.db.entities.find_one(id_filter)
+    if result is None:
+        contellation_name, region_name, region_id = update_constellation(public_data.data['constellation_id'])
+        if not contellation_name:
+            return
+        data_to_update['region_name'] = region_name
+        data_to_update['region_id'] = region_id
+        data_to_update['contellation_name'] = contellation_name
+    else:
+        data_to_update['contellation_name'] = result['name']
+        data_to_update['region_name'] = result['region_name']
+        data_to_update['region_id'] = result['region_id']
+    
+    shared.db.entities.insert_one(data_to_update)
+
+def update_constellation(constellation_id):
+    data_to_update = {}
+    data_to_update['id'] = constellation_id
+    data_to_update['type'] = 'constellation'
+    op = shared.esiapp.op['get_universe_constellations_constellation_id'](
+        constellation_id=constellation_id
+    )
+    public_data = shared.esiclient.request(op)
+    if public_data.status != 200:
+        logger.error('status: ' + str(public_data.status) + ' error with getting constellation data: ' + str(public_data.data))
+        logger.error('constellation with error: ' + str(constellation_id))
+        return False, False, False
+    data_to_update['name'] = public_data.data['name']
+    data_to_update['systems'] = public_data.data['systems']
+    data_to_update['region_id'] = public_data.data['region_id']
+    
+    id_filter = {'id': public_data.data['region_id']}
+    result = shared.db.entities.find_one(id_filter)
+    if result is None:
+        region_name = update_region(public_data.data['region_id'])
+        if not region_name:
+            return False, False, False
+        data_to_update['region_name'] = region_name
+    else:
+        data_to_update['region_name'] = result['name']
+    
+    shared.db.entities.insert_one(data_to_update)
+    return data_to_update['name'], data_to_update['region_name'], public_data.data['region_id']
+
+def update_region(region_id):
+    data_to_update = {}
+    data_to_update['id'] = region_id
+    data_to_update['type'] = 'region'
+    op = shared.esiapp.op['get_universe_regions_region_id'](
+        region_id=region_id
+    )
+    public_data = shared.esiclient.request(op)
+    if public_data.status != 200:
+        logger.error('status: ' + str(public_data.status) + ' error with getting region data: ' + str(public_data.data))
+        logger.error('region with error: ' + str(region_id))
+        return False
+    data_to_update['name'] = public_data.data['name']
+    data_to_update['constellations'] = public_data.data['constellations']
+    data_to_update['description'] = public_data.data['description']
+    
+    shared.db.entities.insert_one(data_to_update)
+    return data_to_update['name']
+
+def update_ship(ship_id):
+    data_to_update = {}
+    data_to_update['id'] = ship_id
+    data_to_update['type'] = 'ship'
+    op = shared.esiapp.op['get_universe_types_type_id'](
+        type_id=ship_id
+    )
+    public_data = shared.esiclient.request(op)
+    if public_data.status != 200:
+        logger.error('status: ' + str(public_data.status) + ' error with getting ship data: ' + str(public_data.data))
+        logger.error('ship with error: ' + str(ship_id))
+        return
+    data_to_update['name'] = public_data.data['name']
+    data_to_update['group_id'] = public_data.data['group_id']
+    
+    id_filter = {'id': public_data.data['group_id']}
+    result = shared.db.entities.find_one(id_filter)
+    if result is None:
+        op = shared.esiapp.op['get_universe_groups_group_id'](
+            group_id=public_data.data['group_id']
+        )
+        public_data = shared.esiclient.request(op)
+        if public_data.status != 200:
+            logger.error('status: ' + str(public_data.status) + ' error with getting group data: ' + str(public_data.data))
+            logger.error('group with error: ' + str(public_data.data['group_id']))
+            return
+        group_data = {}
+        group_data['id'] = public_data.data['id']
+        group_data['types'] = public_data.data['types']
+        group_data['name'] = public_data.data['name']
+        shared.db.entities.insert_one(group_data)
+        data_to_update['group_name'] = public_data.data['name']
+    else:
+        data_to_update['group_name'] = result['name']
+        
+    shared.db.entities.insert_one(data_to_update)

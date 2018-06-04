@@ -1,6 +1,5 @@
 from jobs import shared
 from jobs.shared import logger
-from jobs import public_info_refresh
 from jobs import wallet_refresh
 from app.flask_shared_modules import rq
 
@@ -9,16 +8,16 @@ def update_entity(character_id=None):
     try:
         logger.debug('start one-off info refresh for ' + str(character_id))
     
-        public_info_refresh.user_update(character_id)
+        shared.user_update(character_id)
         
         character_filter = {'id': character_id}
         user_doc = shared.db.entities.find_one(character_filter)
         
         if 'corporation_id' in user_doc:
-            public_info_refresh.corp_update(user_doc['corporation_id'])
+            shared.corp_update(user_doc['corporation_id'])
         
         if 'alliance_id' in user_doc:
-            public_info_refresh.alliance_update(user_doc['alliance_id'])
+            shared.alliance_update(user_doc['alliance_id'])
             
         wallet_refresh.process_character(user_doc)
         wallet_refresh.process_corp(user_doc)
