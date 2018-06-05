@@ -128,10 +128,6 @@ def decode_party_id(party_id):
     result = db.entities.find_one(id_filter)
     if result is not None:
         return
-    if party_id == 1:
-        return 'Character'
-    if party_id == 2:
-        return 'Corporation'
     op = esiapp.op['get_characters_character_id'](
         character_id=party_id
     )

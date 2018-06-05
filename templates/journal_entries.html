@@ -145,7 +145,13 @@
 		    <td>{{ entry.second_party_id }}</td>
 		    {% endif %}
 	      {% if entity_data is defined %}
-			    <td>{{ entry.context_id }}</td>
+	        {% if entry.context_name is defined %}
+	          <td>
+              <a href='{{ entry.context_url }}' class="orange-link">{{ entry.context_name }}</a>
+            </td>
+          {% else %}
+			      <td>{{ entry.context_id }}</td>
+			    {% endif %}
 			    {% if entry.tax is defined %}
 			      {% if entry.tax < 0 %}
 				    <td class='negative-isk'>
@@ -218,8 +224,16 @@
                   <a href='{{ tax_receiver_url }}' class="orange-link">{{ value }}</a>
                 </td>
               </tr>
+		         {% elif key == 'context_name' %}
+             <tr>
+                 <th scope="row">{{ key }}</th>
+		           <td>
+		             <a href='{{ entry.context_url }}' class="orange-link">{{ entry.context_name }}</a>
+		           </td>
+		         </tr>
 				      {% elif ((key != '_id') and (key != 'first_party_url') and 
-				        (key != 'second_party_url') and (key != 'tax_receiver_url')) %}
+				        (key != 'second_party_url') and (key != 'tax_receiver_url') and
+				        (key != 'context_url')) %}
 				      <tr>
 				        <th scope="row">{{ key }}</th>
                 <td>{{ value }}</td>

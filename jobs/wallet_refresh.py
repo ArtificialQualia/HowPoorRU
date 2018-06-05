@@ -4,6 +4,8 @@ from jobs import shared
 from jobs.shared import logger
 from app.flask_shared_modules import rq
 
+from requests import exceptions
+
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
@@ -51,7 +53,8 @@ def process_corp(user_doc):
         return
     
     character_data_to_update = {}
-    refresh_token(user_doc, character_data_to_update)
+    if not refresh_token(user_doc, character_data_to_update):
+        return
     
     if len(character_data_to_update) > 0:
         character_filter = {'id': user_doc['id']}
@@ -103,7 +106,8 @@ def process_character(user_doc):
             'esi-wallet.read_character_wallet.v1' not in user_doc['scopes'].split(' ')):
         return
     data_to_update = {}
-    refresh_token(user_doc, data_to_update)
+    if not refresh_token(user_doc, data_to_update):
+        return
     op = shared.esiapp.op['get_characters_character_id_wallet'](
         character_id=user_doc['id']
     )
@@ -140,11 +144,16 @@ def refresh_token(user_doc, data_to_update={}):
     }
     shared.esisecurity.update_token(sso_data)
     if sso_data['expires_in'] <= 30:
-        tokens = shared.esisecurity.refresh()
+        try:
+            tokens = shared.esisecurity.refresh()
+        except exceptions.SSLError:
+            logger.error('ssl error refreshing token for ' + str(user_doc['id']))
+            return False
         data_to_update['tokens'] = tokens
         delta_expire = timedelta(seconds=data_to_update['tokens']['expires_in'])
         token_expire = datetime.utcnow() + delta_expire
         data_to_update['tokens']['ExpiresOn'] = token_expire.strftime(datetime_format)
+    return True
 
 def process_journal(page, entity_doc, division=None):
     if division:
@@ -341,6 +350,7 @@ def update_ship(ship_id):
             return
         group_data = {}
         group_data['id'] = public_data.data['id']
+        group_data['type'] = 'group'
         group_data['types'] = public_data.data['types']
         group_data['name'] = public_data.data['name']
         shared.db.entities.insert_one(group_data)

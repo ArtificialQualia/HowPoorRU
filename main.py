@@ -69,9 +69,10 @@ try:
             mongo.db.journals.create_index([('second_party_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True)
             mongo.db.journals.create_index([('tax_receiver_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
                                            partialFilterExpression={ 'tax_receiver_id': { '$exists': True } })
+            mongo.db.journals.create_index([('context_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
+                                           partialFilterExpression={ 'context_id': { '$exists': True } })
 except ImportError as e:
     print('can\'t import uwsgidecorators, if this is a dev environment, please run DB setup manually')
-
 
 app.register_blueprint(sso_pages)
 
@@ -106,6 +107,7 @@ def index(page_number=1, *args):
         conditional_decode(entry, 'tax_receiver_')
         conditional_decode(entry, 'first_party_')
         conditional_decode(entry, 'second_party_')
+        conditional_decode(entry, 'context_')
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
@@ -166,6 +168,7 @@ def character(entity_id, page_number=1, tx_type='all'):
         conditional_decode(entry, 'tax_receiver_')
         conditional_decode(entry, 'first_party_')
         conditional_decode(entry, 'second_party_')
+        conditional_decode(entry, 'context_')
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
@@ -222,6 +225,7 @@ def corporation(entity_id, page_number=1, tx_type='all'):
         conditional_decode(entry, 'tax_receiver_')
         conditional_decode(entry, 'first_party_')
         conditional_decode(entry, 'second_party_')
+        conditional_decode(entry, 'context_')
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
@@ -275,6 +279,7 @@ def alliance(entity_id, page_number=1, tx_type='all'):
         conditional_decode(entry, 'tax_receiver_')
         conditional_decode(entry, 'first_party_')
         conditional_decode(entry, 'second_party_')
+        conditional_decode(entry, 'context_')
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
@@ -282,6 +287,72 @@ def alliance(entity_id, page_number=1, tx_type='all'):
         journal_entries.append(sorted_entry)
         
     return render_template('alliance.html', entity_data=alliance_data, journal_entries=journal_entries, page_number=page_number)
+
+@app.route('/system/<int:entity_id>')
+@app.route('/system/<int:entity_id>/<int:page_number>')
+def system(entity_id, page_number=1):
+    return context_id_routes(entity_id, 'system', page_number)
+
+@app.route('/constellation/<int:entity_id>')
+@app.route('/constellation/<int:entity_id>/<int:page_number>')
+def constellation(entity_id, page_number=1):
+    return context_id_routes(entity_id, 'constellation', page_number)
+
+@app.route('/region/<int:entity_id>')
+@app.route('/region/<int:entity_id>/<int:page_number>')
+def region(entity_id, page_number=1):
+    return context_id_routes(entity_id, 'region', page_number)
+
+@app.route('/ship/<int:entity_id>')
+@app.route('/ship/<int:entity_id>/<int:page_number>')
+def ship(entity_id, page_number=1):
+    return context_id_routes(entity_id, 'ship', page_number)
+
+@app.route('/group/<int:entity_id>')
+@app.route('/group/<int:entity_id>/<int:page_number>')
+def group(entity_id, page_number=1):
+    id_filter = {'id': entity_id}
+    entity_data = mongo.db.entities.find_one_or_404(id_filter)
+    if entity_data['type'] != 'group':
+        abort(404)
+    return context_id_routes({ '$in': entity_data['types'] }, 'group', page_number)
+
+def context_id_routes(entity_id, context_type, page_number):
+    # ensure page is in valid range
+    page_range_check(page_number)
+    
+    # find user in database, or return a 404
+    id_filter = {'id': entity_id}
+    entity_data = mongo.db.entities.find_one_or_404(id_filter)
+    if entity_data['type'] != context_type:
+        abort(404)
+    
+    # find all journal entries that this entity's corps are involved in
+    journal_search = {'context_id': entity_id}
+    journal_cursor = mongo.db.journals.find(journal_search)
+    
+    # calculate number of entries to skip in database
+    skip_amount = (page_number - 1) * config.PAGE_SIZE
+    
+    # sort (required for ordered transactions), skip over entries based on our page number,
+    # then limit the number of results returned
+    journal_cursor.sort('id', -1).skip(skip_amount).limit(config.PAGE_SIZE)
+    
+    # initialize empty journal_entries to ensure something gets passed to render_template
+    journal_entries = []
+    for entry in journal_cursor:
+        # turn common line items in journal entry into proper names and generated URLs
+        conditional_decode(entry, 'tax_receiver_')
+        conditional_decode(entry, 'first_party_')
+        conditional_decode(entry, 'second_party_')
+        conditional_decode(entry, 'context_')
+        
+        # sort the journal entry by name so line items are less random in transaction details modal
+        sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
+        
+        journal_entries.append(sorted_entry)
+        
+    return render_template(str(context_type) + '.html', entity_data=entity_data, journal_entries=journal_entries, page_number=page_number)
 
 @app.route('/search', methods=['POST'])
 def search():
@@ -333,26 +404,17 @@ def page_range_check(page_number):
 def conditional_decode(entry, id_prefix):
     """ helper to decode entity database ids to names and urls """
     if (id_prefix + 'id') in entry:
+        if entry[id_prefix + 'id'] == 1:
+            entry[id_prefix + 'id'] = 'Character'
+            return
+        if entry[id_prefix + 'id'] == 2:
+            entry[id_prefix + 'id'] = 'Corporation'
+            return
         id_filter = {'id': entry[id_prefix + 'id']}
         result = mongo.db.entities.find_one(id_filter)
         if result is not None:
             entry[id_prefix + 'name'] = result['name']
             entry[id_prefix + 'url'] = url_for(result['type'], entity_id=result['id'])
-
-def decode_journal_party_id(party_id):
-    """ 
-    looks up database ids in all databases and returns names and urls for those ids 
-    
-    Returns:
-        Tuple (name_of_entity, url_for_entity)
-        if id can't be resolved, returns (None, None)
-    """
-    id_filter = {'id': party_id}
-    result = mongo.db.entities.find_one(id_filter)
-    if result is not None:
-        return result['name'], url_for(result['type'], entity_id=result['id'])
-    
-    return None, None
 
 def redis_bytes_to_data(redis_object):
     decoded_object = {}
