@@ -391,6 +391,14 @@ def search():
         one_result.append(bolded_name)
         one_result.append(result['type'])
         one_result.append(url_for(result['type'], entity_id=result['id']))
+        if result['type'] == 'character':
+            one_result.append('https://image.eveonline.com/Character/' + str(result['id']) + '_32.jpg')
+        elif result['type'] == 'ship':
+            one_result.append('https://image.eveonline.com/Render/' + str(result['id']) + '_32.png')
+        elif result['type'] == 'system' or result['type'] == 'constellation' or result['type'] == 'region':
+            one_result.append(url_for('static', filename='img/' + result['type'] + '.png'))
+        else:
+            one_result.append('https://image.eveonline.com/' + result['type'] + '/' + str(result['id']) + '_32.png')
         limited_results.append(one_result)
     return jsonify(limited_results)
 

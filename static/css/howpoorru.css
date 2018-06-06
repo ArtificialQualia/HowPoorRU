@@ -243,3 +243,7 @@ a.page-link:hover {
 	background-color: rgba(120, 120, 120, 0.7);
 	border-color: rgba(160, 160, 160, 1) rgba(160, 160, 160, 1) white;
 }
+
+.fa-2x {
+	font-size: 24px;
+}

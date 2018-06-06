@@ -34,11 +34,11 @@ function autocomplete(inp) {
           /*make the matching letters bold:*/
           /*b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
           b.innerHTML += arr[i].substr(val.length);*/
-          if (arr[i][2] == "character") {
-            b.innerHTML += "<img class=\"portrait\" src=\"https://image.eveonline.com/Character/" + arr[i][0] + "_32.jpg\" height=\"24\" width=\"24\" />";
+          if (arr[i][2] == "group") {
+            b.innerHTML += "<i class=\"portrait fas fa-th fa-2x text-warning bg-dark p-1\"></i></span>";
           }
           else {
-            b.innerHTML += "<img class=\"portrait\" src=\"https://image.eveonline.com/" + arr[i][2] + "/" + arr[i][0] + "_32.png\" height=\"24\" width=\"24\" />";
+            b.innerHTML += "<img class=\"portrait\" src=\"" + arr[i][4] + "\" height=\"24\" width=\"24\" />";
           }
           b.innerHTML += arr[i][1];
           b.innerHTML += "<i class=\"col text-right\">" + arr[i][2] + "</i>";
