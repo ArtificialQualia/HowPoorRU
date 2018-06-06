@@ -114,6 +114,14 @@
             {% else %}
             <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.second_party_amount) }}</td>
             {% endif%}
+          {% else %}
+            {% if entry.second_party_amount < 0 %}
+            <td class='negative-isk'>{{ '{0:0,.2f}'.format(entry.second_party_amount) }}</td>
+            {% elif entry.second_party_amount == 0.0 %}
+            <td><b>0.0</b></td>
+            {% else %}
+            <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.second_party_amount) }}</td>
+            {% endif %}
           {% endif %}
 		    {% endif %}
 		    <td>{{ entry.date }}</td>

@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+  <title>{{ entity_data.name }} - HowPoor.RU</title>
+{% endblock %}
+{% block content %}
+  <div class="row">
+    <div class="col col-auto">
+      <i class="fas fa-th fa-9x text-warning bg-dark p-2"></i>
+    </div>
+    <div class="col col-auto">
+      <table class="table table-responsive character-table">
+        <tr>
+          <th scope="row">Name:</th>
+          <td>
+            <a href="{{ url_for('group', entity_id=entity_data.id) }}" class="orange-link">
+              {{ entity_data.name }}
+            </a>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  {% include 'journal_entries.html' %}
+{% endblock %}

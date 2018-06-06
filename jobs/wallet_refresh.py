@@ -71,6 +71,7 @@ def process_corp(user_doc):
     wallet = shared.esiclient.request(op)
     if wallet.status != 200:
         logger.error('status: ' + str(wallet.status) + ' error with getting corp wallet data: ' + str(wallet.data))
+        logger.error('headers: ' + str(wallet.header))
         logger.error('error with getting corp wallet data: ' + str(corp_doc['id']))
         if 'error' in wallet.data and wallet.data['error'] == 'Character does not have required role(s)':
             logger.error('Character ' + user_doc['name'] + 
@@ -114,6 +115,7 @@ def process_character(user_doc):
     wallet = shared.esiclient.request(op)
     if wallet.status != 200:
         logger.error('status: ' + str(wallet.status) + ' error with getting character wallet data: ' + str(wallet.data))
+        logger.error('headers: ' + str(wallet.header))
         logger.error('error with getting character wallet data: ' + str(user_doc['id']))
         return
     data_to_update['wallet'] = wallet.data
@@ -172,6 +174,7 @@ def process_journal(page, entity_doc, division=None):
     journal = shared.esiclient.request(op)
     if journal.status != 200:
         logger.error('status: ' + str(journal.status) + ' error with getting journal data: ' + str(journal.data))
+        logger.error('headers: ' + str(journal.header))
         logger.error('error with getting journal data: ' + str(entity_doc['id']))
         return
     num_pages = int(journal.header['X-Pages'][0])
@@ -210,20 +213,13 @@ def process_journal(page, entity_doc, division=None):
 def decode_journal_entry(journal_entry):
     journal_entry['date'] = journal_entry['date'].v.replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %X")
     
-    special = shared.decode_party_id(journal_entry['first_party_id'])
-    if special:
-        journal_entry['first_party_id'] = special
-        
-    special = shared.decode_party_id(journal_entry['second_party_id'])
-    if special:
-        journal_entry['second_party_id'] = special
-        
+    shared.decode_party_id(journal_entry['first_party_id'])
+    shared.decode_party_id(journal_entry['second_party_id'])
     if 'tax_receiver_id' in journal_entry:
-        special = shared.decode_party_id(journal_entry['tax_receiver_id'])
-        if special:
-            journal_entry['tax_receiver_id'] = special
+        shared.decode_party_id(journal_entry['tax_receiver_id'])
             
-    decode_context_id(journal_entry['context_id'], journal_entry['context_id_type'])
+    if 'context_id' in journal_entry:
+        decode_context_id(journal_entry['context_id'], journal_entry['context_id_type'])
     
 def decode_context_id(context_id, context_id_type):
     id_filter = {'id': context_id}
@@ -231,13 +227,13 @@ def decode_context_id(context_id, context_id_type):
     if result is not None:
         return
     
-    if context_id == 'character_id':
+    if context_id_type == 'character_id':
         shared.user_update(context_id)
-    elif context_id == 'corporation_id':
+    elif context_id_type == 'corporation_id':
         shared.corp_update(context_id)
-    elif context_id == 'system_id':
+    elif context_id_type == 'system_id':
         update_system(context_id)
-    elif context_id == 'eve_system':
+    elif context_id_type == 'eve_system':
         update_ship(context_id)
     else:
         return
@@ -252,6 +248,7 @@ def update_system(system_id):
     public_data = shared.esiclient.request(op)
     if public_data.status != 200:
         logger.error('status: ' + str(public_data.status) + ' error with getting system data: ' + str(public_data.data))
+        logger.error('headers: ' + str(public_data.header))
         logger.error('system with error: ' + str(system_id))
         return
     data_to_update['name'] = public_data.data['name']
@@ -266,9 +263,9 @@ def update_system(system_id):
             return
         data_to_update['region_name'] = region_name
         data_to_update['region_id'] = region_id
-        data_to_update['contellation_name'] = contellation_name
+        data_to_update['constellation_name'] = contellation_name
     else:
-        data_to_update['contellation_name'] = result['name']
+        data_to_update['constellation_name'] = result['name']
         data_to_update['region_name'] = result['region_name']
         data_to_update['region_id'] = result['region_id']
     
@@ -284,6 +281,7 @@ def update_constellation(constellation_id):
     public_data = shared.esiclient.request(op)
     if public_data.status != 200:
         logger.error('status: ' + str(public_data.status) + ' error with getting constellation data: ' + str(public_data.data))
+        logger.error('headers: ' + str(public_data.header))
         logger.error('constellation with error: ' + str(constellation_id))
         return False, False, False
     data_to_update['name'] = public_data.data['name']
@@ -313,6 +311,7 @@ def update_region(region_id):
     public_data = shared.esiclient.request(op)
     if public_data.status != 200:
         logger.error('status: ' + str(public_data.status) + ' error with getting region data: ' + str(public_data.data))
+        logger.error('headers: ' + str(public_data.header))
         logger.error('region with error: ' + str(region_id))
         return False
     data_to_update['name'] = public_data.data['name']
@@ -332,6 +331,7 @@ def update_ship(ship_id):
     public_data = shared.esiclient.request(op)
     if public_data.status != 200:
         logger.error('status: ' + str(public_data.status) + ' error with getting ship data: ' + str(public_data.data))
+        logger.error('headers: ' + str(public_data.header))
         logger.error('ship with error: ' + str(ship_id))
         return
     data_to_update['name'] = public_data.data['name']
@@ -346,10 +346,11 @@ def update_ship(ship_id):
         public_data = shared.esiclient.request(op)
         if public_data.status != 200:
             logger.error('status: ' + str(public_data.status) + ' error with getting group data: ' + str(public_data.data))
+            logger.error('headers: ' + str(public_data.header))
             logger.error('group with error: ' + str(public_data.data['group_id']))
             return
         group_data = {}
-        group_data['id'] = public_data.data['id']
+        group_data['id'] = public_data.data['group_id']
         group_data['type'] = 'group'
         group_data['types'] = public_data.data['types']
         group_data['name'] = public_data.data['name']

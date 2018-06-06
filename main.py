@@ -296,12 +296,26 @@ def system(entity_id, page_number=1):
 @app.route('/constellation/<int:entity_id>')
 @app.route('/constellation/<int:entity_id>/<int:page_number>')
 def constellation(entity_id, page_number=1):
-    return context_id_routes(entity_id, 'constellation', page_number)
+    id_filter = {'id': entity_id}
+    entity_data = mongo.db.entities.find_one_or_404(id_filter)
+    if entity_data['type'] != 'constellation':
+        abort(404)
+    return context_id_routes({ '$in': entity_data['systems'] }, 'constellation', page_number, entity_data)
 
 @app.route('/region/<int:entity_id>')
 @app.route('/region/<int:entity_id>/<int:page_number>')
 def region(entity_id, page_number=1):
-    return context_id_routes(entity_id, 'region', page_number)
+    id_filter = {'id': entity_id}
+    entity_data = mongo.db.entities.find_one_or_404(id_filter)
+    if entity_data['type'] != 'region':
+        abort(404)
+    system_ids = []
+    for constellation in entity_data['constellations']:
+        id_filter = {'id': constellation}
+        constellation_data = mongo.db.entities.find_one(id_filter)
+        if constellation_data:
+            system_ids.extend(constellation_data['systems'])
+    return context_id_routes({ '$in': system_ids }, 'region', page_number, entity_data)
 
 @app.route('/ship/<int:entity_id>')
 @app.route('/ship/<int:entity_id>/<int:page_number>')
@@ -315,17 +329,23 @@ def group(entity_id, page_number=1):
     entity_data = mongo.db.entities.find_one_or_404(id_filter)
     if entity_data['type'] != 'group':
         abort(404)
-    return context_id_routes({ '$in': entity_data['types'] }, 'group', page_number)
+    return context_id_routes({ '$in': entity_data['types'] }, 'group', page_number, entity_data)
 
-def context_id_routes(entity_id, context_type, page_number):
+def context_id_routes(entity_id, context_type, page_number, entity_group_data=None):
     # ensure page is in valid range
     page_range_check(page_number)
     
     # find user in database, or return a 404
-    id_filter = {'id': entity_id}
-    entity_data = mongo.db.entities.find_one_or_404(id_filter)
-    if entity_data['type'] != context_type:
-        abort(404)
+    if context_type != 'group' and context_type != 'region' and context_type != 'constellation':
+        id_filter = {'id': entity_id}
+        entity_data = mongo.db.entities.find_one_or_404(id_filter)
+        if entity_data['type'] != context_type:
+            abort(404)
+    else:
+        entity_data = entity_group_data
+    
+    if context_type == 'ship':
+        conditional_decode(entity_data, 'group_')
     
     # find all journal entries that this entity's corps are involved in
     journal_search = {'context_id': entity_id}
@@ -431,7 +451,8 @@ def make_entity_filter(entity_filter, tx_type):
         journal_search = {'$or':[ 
             {'first_party_id': entity_filter},
             {'second_party_id': entity_filter},
-            {'tax_receiver_id': entity_filter}
+            {'tax_receiver_id': entity_filter},
+            {'context_id': entity_filter}
         ]}
     elif tx_type == 'gains':
         journal_search = {'$or':[ 
@@ -447,7 +468,8 @@ def make_entity_filter(entity_filter, tx_type):
     elif tx_type == 'neutral':
         journal_search = {'$or':[ 
             {'$and': [{'first_party_id': entity_filter}, {'first_party_amount': {'$eq': 0}}]},
-            {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$eq': 0}}]}
+            {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$eq': 0}}]},
+            {'context_id': entity_filter}
         ]}
     return journal_search
 
