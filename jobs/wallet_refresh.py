@@ -253,7 +253,7 @@ def update_market_transaction(journal_entry, entity_doc, division):
         logger.error('entity with error: ' + str(entity_doc['id']))
         return
     for transaction in public_data.data:
-        if transaction['journal_ref_id'] == journal_entry['id']:
+        if transaction['transaction_id'] == journal_entry['context_id']:
             journal_entry['transaction_context_id'] = journal_entry['context_id']
             journal_entry['transaction_context_type'] = journal_entry['context_id_type']
             journal_entry['unit_price'] = transaction['unit_price']
@@ -268,6 +268,7 @@ def update_market_transaction(journal_entry, entity_doc, division):
             result = shared.db.entities.find_one(id_filter)
             if result is None:
                 update_station(transaction['location_id'])
+            return
     
 def update_station(station_id):
     data_to_update = {}

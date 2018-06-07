@@ -218,8 +218,7 @@ a.page-link:hover {
   padding: 8px;
   cursor: pointer;
   background-color: black; 
-  border-bottom: 1px solid grey; 
-  white-space: pre;
+  border-bottom: 1px solid grey;
 }
 .autocomplete-items div:hover {
   /*when hovering an item:*/

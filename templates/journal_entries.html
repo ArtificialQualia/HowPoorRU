@@ -162,6 +162,11 @@
               <a href='{{ entry.location_url }}' class="orange-link d-inline">{{ entry.location_name }}</a>, 
               <a href='{{ entry.type_url }}' class="orange-link d-inline">{{ entry.type_name }}</a>
             </td>
+          {% elif entry.context_id_type == 'location_id type_id' and entry.type_name is defined %}
+            <td>
+              {{ entry.location_id }}, 
+              <a href='{{ entry.type_url }}' class="orange-link d-inline">{{ entry.type_name }}</a>
+            </td>
           {% else %}
 			      <td>{{ entry.context_id }}</td>
 			    {% endif %}
@@ -244,9 +249,21 @@
 		             <a href='{{ entry.context_url }}' class="orange-link">{{ entry.context_name }}</a>
 		           </td>
 		         </tr>
-				      {% elif ((key != '_id') and (key != 'first_party_url') and 
-				        (key != 'second_party_url') and (key != 'tax_receiver_url') and
-				        (key != 'context_url')) %}
+	          {% elif key == 'location_name' %}
+             <tr>
+                 <th scope="row">{{ key }}</th>
+               <td>
+                 <a href='{{ entry.location_url }}' class="orange-link">{{ entry.location_name }}</a>
+               </td>
+             </tr>
+            {% elif key == 'type_name' %}
+             <tr>
+                 <th scope="row">{{ key }}</th>
+               <td>
+                 <a href='{{ entry.type_url }}' class="orange-link">{{ entry.type_name }}</a>
+               </td>
+             </tr>
+				      {% elif (key != '_id') and not (key.endswith('url')) %}
 				      <tr>
 				        <th scope="row">{{ key }}</th>
                 <td>{{ value }}</td>

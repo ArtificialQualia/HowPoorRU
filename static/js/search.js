@@ -31,16 +31,16 @@ function autocomplete(inp) {
           /*create a DIV element for each matching element:*/
           b = document.createElement("DIV");
           b.className = "row";
-          /*make the matching letters bold:*/
-          /*b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
-          b.innerHTML += arr[i].substr(val.length);*/
+          inlineSpan = "<span class=\"d-inline\">"
           if (arr[i][2] == "group") {
-            b.innerHTML += "<i class=\"portrait fas fa-th fa-2x text-warning bg-dark p-1\"></i></span>";
+            inlineSpan += "<i class=\"portrait fas fa-th fa-2x text-warning bg-dark p-1\"></i>";
           }
           else {
-            b.innerHTML += "<img class=\"portrait\" src=\"" + arr[i][4] + "\" height=\"24\" width=\"24\" />";
+            inlineSpan += "<img class=\"portrait\" src=\"" + arr[i][4] + "\" height=\"24\" width=\"24\" />";
           }
-          b.innerHTML += arr[i][1];
+          inlineSpan += arr[i][1];
+          inlineSpan += "</span>"
+          b.innerHTML += inlineSpan
           b.innerHTML += "<i class=\"col text-right\">" + arr[i][2] + "</i>";
           /*insert a input field that will hold the current array item's value:*/
           b.innerHTML += "<input type='hidden' value='" + arr[i][3] + "'>";
