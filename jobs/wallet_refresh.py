@@ -1,5 +1,3 @@
-from pymongo import errors
-
 from jobs import shared
 from jobs.shared import logger
 from app.flask_shared_modules import rq
@@ -9,8 +7,6 @@ from requests import exceptions
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
-
-from jobs import public_info_refresh
 
 datetime_format = "%Y-%m-%dT%X"
 
@@ -201,7 +197,7 @@ def process_journal(page, entity_doc, division=None):
             else:
                 logger.error('Dont know what to do with: ' + str(journal_entry))
                 logger.error('Entity with error: ' + str(entity_doc['id']))
-            decode_journal_entry(journal_entry)
+            decode_journal_entry(journal_entry, entity_doc, division)
             new_journal_entries.append(journal_entry)
         else:
             return new_journal_entries
@@ -210,7 +206,7 @@ def process_journal(page, entity_doc, division=None):
         return new_journal_entries.extend(next_pages_entries)
     return new_journal_entries
     
-def decode_journal_entry(journal_entry):
+def decode_journal_entry(journal_entry, entity_doc, division):
     journal_entry['date'] = journal_entry['date'].v.replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %X")
     
     shared.decode_party_id(journal_entry['first_party_id'])
@@ -219,25 +215,88 @@ def decode_journal_entry(journal_entry):
         shared.decode_party_id(journal_entry['tax_receiver_id'])
             
     if 'context_id' in journal_entry:
-        decode_context_id(journal_entry['context_id'], journal_entry['context_id_type'])
+        decode_context_id(journal_entry, entity_doc, division)
     
-def decode_context_id(context_id, context_id_type):
-    id_filter = {'id': context_id}
+def decode_context_id(journal_entry, entity_doc, division):
+    id_filter = {'id': journal_entry['context_id']}
     result = shared.db.entities.find_one(id_filter)
     if result is not None:
         return
     
-    if context_id_type == 'character_id':
-        shared.user_update(context_id)
-    elif context_id_type == 'corporation_id':
-        shared.corp_update(context_id)
-    elif context_id_type == 'system_id':
-        update_system(context_id)
-    elif context_id_type == 'eve_system':
-        update_ship(context_id)
+    if journal_entry['context_id_type'] == 'character_id':
+        shared.user_update(journal_entry['context_id'])
+    elif journal_entry['context_id_type'] == 'corporation_id':
+        shared.corp_update(journal_entry['context_id'])
+    elif journal_entry['context_id_type'] == 'system_id':
+        update_system(journal_entry['context_id'])
+    elif journal_entry['context_id_type'] == 'eve_system':
+        update_item(journal_entry['context_id'], 'ship')
+    elif journal_entry['context_id_type'] == 'market_transaction_id':
+        update_market_transaction(journal_entry, entity_doc, division)
     else:
         return
     
+def update_market_transaction(journal_entry, entity_doc, division):
+    if not division:
+        op = shared.esiapp.op['get_characters_character_id_wallet_transactions'](
+            character_id=entity_doc['id']
+        )
+    else:
+        op = shared.esiapp.op['get_characters_character_id_wallet_transactions'](
+            corporation_id=entity_doc['id'],
+            division=division
+        )
+    public_data = shared.esiclient.request(op)
+    if public_data.status != 200:
+        logger.error('status: ' + str(public_data.status) + ' error with getting market transaction: ' + str(public_data.data))
+        logger.error('headers: ' + str(public_data.header))
+        logger.error('entity with error: ' + str(entity_doc['id']))
+        return
+    for transaction in public_data.data:
+        if transaction['journal_ref_id'] == journal_entry['id']:
+            journal_entry['transaction_context_id'] = journal_entry['context_id']
+            journal_entry['transaction_context_type'] = journal_entry['context_id_type']
+            journal_entry['unit_price'] = transaction['unit_price']
+            journal_entry['quantity'] = transaction['quantity']
+            journal_entry['context_id_type'] = 'location_id type_id'
+            journal_entry['context_id'] = [transaction['location_id'], transaction['type_id']]
+            id_filter = {'id': transaction['type_id']}
+            result = shared.db.entities.find_one(id_filter)
+            if result is None:
+                update_item(transaction['type_id'], 'item')
+            id_filter = {'id': transaction['location_id']}
+            result = shared.db.entities.find_one(id_filter)
+            if result is None:
+                update_station(transaction['location_id'])
+    
+def update_station(station_id):
+    data_to_update = {}
+    data_to_update['id'] = station_id
+    data_to_update['type'] = 'station'
+    op = shared.esiapp.op['get_universe_stations_station_id'](
+        station_id=station_id
+    )
+    public_data = shared.esiclient.request(op)
+    if public_data.status != 200:
+        if public_data.status == 400:
+            logger.info('No station found for: ' + str(station_id) + ', it is probably a citadel.')
+            return
+        logger.error('status: ' + str(public_data.status) + ' error with getting station data: ' + str(public_data.data))
+        logger.error('headers: ' + str(public_data.header))
+        logger.error('system with error: ' + str(station_id))
+        return
+    data_to_update['name'] = public_data.data['name']
+    data_to_update['type_id'] = public_data.data['type_id']
+    data_to_update['system_id'] = public_data.data['system_id']
+    
+    id_filter = {'id': public_data.data['system_id']}
+    result = shared.db.entities.find_one(id_filter)
+    if result is None:
+        update_system(public_data.data['system_id'])
+    
+    shared.db.entities.insert_one(data_to_update)
+    
+
 def update_system(system_id):
     data_to_update = {}
     data_to_update['id'] = system_id
@@ -254,6 +313,8 @@ def update_system(system_id):
     data_to_update['name'] = public_data.data['name']
     data_to_update['security_status'] = public_data.data['security_status']
     data_to_update['constellation_id'] = public_data.data['constellation_id']
+    if 'stations' in public_data.data:
+        data_to_update['stations'] = public_data.data['stations']
     
     id_filter = {'id': public_data.data['constellation_id']}
     result = shared.db.entities.find_one(id_filter)
@@ -321,18 +382,21 @@ def update_region(region_id):
     shared.db.entities.insert_one(data_to_update)
     return data_to_update['name']
 
-def update_ship(ship_id):
+def update_item(item_id, item_type):
     data_to_update = {}
-    data_to_update['id'] = ship_id
-    data_to_update['type'] = 'ship'
+    data_to_update['id'] = item_id
+    data_to_update['type'] = item_type
     op = shared.esiapp.op['get_universe_types_type_id'](
-        type_id=ship_id
+        type_id=item_id
     )
     public_data = shared.esiclient.request(op)
     if public_data.status != 200:
-        logger.error('status: ' + str(public_data.status) + ' error with getting ship data: ' + str(public_data.data))
+        if public_data.status == 400:
+            logger.info('No item found for: ' + str(item_id) + ', it is probably not an item.')
+            return
+        logger.error('status: ' + str(public_data.status) + ' error with getting item data: ' + str(public_data.data))
         logger.error('headers: ' + str(public_data.header))
-        logger.error('ship with error: ' + str(ship_id))
+        logger.error('item with error: ' + str(item_id))
         return
     data_to_update['name'] = public_data.data['name']
     data_to_update['group_id'] = public_data.data['group_id']
@@ -355,8 +419,5 @@ def update_ship(ship_id):
         group_data['types'] = public_data.data['types']
         group_data['name'] = public_data.data['name']
         shared.db.entities.insert_one(group_data)
-        data_to_update['group_name'] = public_data.data['name']
-    else:
-        data_to_update['group_name'] = result['name']
         
     shared.db.entities.insert_one(data_to_update)

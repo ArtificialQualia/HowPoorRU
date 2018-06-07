@@ -107,7 +107,7 @@ def index(page_number=1, *args):
         conditional_decode(entry, 'tax_receiver_')
         conditional_decode(entry, 'first_party_')
         conditional_decode(entry, 'second_party_')
-        conditional_decode(entry, 'context_')
+        context_decode(entry)
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
@@ -168,7 +168,7 @@ def character(entity_id, page_number=1, tx_type='all'):
         conditional_decode(entry, 'tax_receiver_')
         conditional_decode(entry, 'first_party_')
         conditional_decode(entry, 'second_party_')
-        conditional_decode(entry, 'context_')
+        context_decode(entry)
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
@@ -225,7 +225,7 @@ def corporation(entity_id, page_number=1, tx_type='all'):
         conditional_decode(entry, 'tax_receiver_')
         conditional_decode(entry, 'first_party_')
         conditional_decode(entry, 'second_party_')
-        conditional_decode(entry, 'context_')
+        context_decode(entry)
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
@@ -279,7 +279,7 @@ def alliance(entity_id, page_number=1, tx_type='all'):
         conditional_decode(entry, 'tax_receiver_')
         conditional_decode(entry, 'first_party_')
         conditional_decode(entry, 'second_party_')
-        conditional_decode(entry, 'context_')
+        context_decode(entry)
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
@@ -291,7 +291,14 @@ def alliance(entity_id, page_number=1, tx_type='all'):
 @app.route('/system/<int:entity_id>')
 @app.route('/system/<int:entity_id>/<int:page_number>')
 def system(entity_id, page_number=1):
-    return context_id_routes(entity_id, 'system', page_number)
+    id_filter = {'id': entity_id}
+    entity_data = mongo.db.entities.find_one_or_404(id_filter)
+    if entity_data['type'] != 'system':
+        abort(404)
+    find_ids = [entity_id]
+    if 'stations' in entity_data:
+        find_ids.extend(entity_data['stations'])
+    return context_id_routes({ '$in': find_ids }, 'system', page_number, entity_data)
 
 @app.route('/constellation/<int:entity_id>')
 @app.route('/constellation/<int:entity_id>/<int:page_number>')
@@ -300,7 +307,14 @@ def constellation(entity_id, page_number=1):
     entity_data = mongo.db.entities.find_one_or_404(id_filter)
     if entity_data['type'] != 'constellation':
         abort(404)
-    return context_id_routes({ '$in': entity_data['systems'] }, 'constellation', page_number, entity_data)
+    find_ids = entity_data['systems']
+    for system in entity_data['systems']:
+        id_filter = {'id': system}
+        system_data = mongo.db.entities.find_one(id_filter)
+        if system_data:
+            if 'stations' in system_data:
+                find_ids.extend(system_data['stations'])
+    return context_id_routes({ '$in': find_ids }, 'constellation', page_number, entity_data)
 
 @app.route('/region/<int:entity_id>')
 @app.route('/region/<int:entity_id>/<int:page_number>')
@@ -315,12 +329,28 @@ def region(entity_id, page_number=1):
         constellation_data = mongo.db.entities.find_one(id_filter)
         if constellation_data:
             system_ids.extend(constellation_data['systems'])
+            for system in constellation_data['systems']:
+                id_filter = {'id': system}
+                system_data = mongo.db.entities.find_one(id_filter)
+                if system_data:
+                    if 'stations' in system_data:
+                        system_ids.extend(system_data['stations'])
     return context_id_routes({ '$in': system_ids }, 'region', page_number, entity_data)
 
 @app.route('/ship/<int:entity_id>')
 @app.route('/ship/<int:entity_id>/<int:page_number>')
 def ship(entity_id, page_number=1):
     return context_id_routes(entity_id, 'ship', page_number)
+
+@app.route('/item/<int:entity_id>')
+@app.route('/item/<int:entity_id>/<int:page_number>')
+def item(entity_id, page_number=1):
+    return context_id_routes(entity_id, 'item', page_number)
+
+@app.route('/station/<int:entity_id>')
+@app.route('/station/<int:entity_id>/<int:page_number>')
+def station(entity_id, page_number=1):
+    return context_id_routes(entity_id, 'station', page_number)
 
 @app.route('/group/<int:entity_id>')
 @app.route('/group/<int:entity_id>/<int:page_number>')
@@ -336,7 +366,7 @@ def context_id_routes(entity_id, context_type, page_number, entity_group_data=No
     page_range_check(page_number)
     
     # find user in database, or return a 404
-    if context_type != 'group' and context_type != 'region' and context_type != 'constellation':
+    if not entity_group_data:
         id_filter = {'id': entity_id}
         entity_data = mongo.db.entities.find_one_or_404(id_filter)
         if entity_data['type'] != context_type:
@@ -344,8 +374,8 @@ def context_id_routes(entity_id, context_type, page_number, entity_group_data=No
     else:
         entity_data = entity_group_data
     
-    if context_type == 'ship':
-        conditional_decode(entity_data, 'group_')
+    conditional_decode(entity_data, 'group_')
+    conditional_decode(entity_data, 'system_')
     
     # find all journal entries that this entity's corps are involved in
     journal_search = {'context_id': entity_id}
@@ -365,7 +395,7 @@ def context_id_routes(entity_id, context_type, page_number, entity_group_data=No
         conditional_decode(entry, 'tax_receiver_')
         conditional_decode(entry, 'first_party_')
         conditional_decode(entry, 'second_party_')
-        conditional_decode(entry, 'context_')
+        context_decode(entry)
         
         # sort the journal entry by name so line items are less random in transaction details modal
         sorted_entry = OrderedDict(sorted(entry.items(), key=lambda x: x[0]))
@@ -395,6 +425,10 @@ def search():
             one_result.append('https://image.eveonline.com/Character/' + str(result['id']) + '_32.jpg')
         elif result['type'] == 'ship':
             one_result.append('https://image.eveonline.com/Render/' + str(result['id']) + '_32.png')
+        elif result['type'] == 'item':
+            one_result.append('https://image.eveonline.com/Type/' + str(result['id']) + '_32.png')
+        elif result['type'] == 'station':
+            one_result.append('https://image.eveonline.com/Render/' + str(result['type_id']) + '_32.png')
         elif result['type'] == 'system' or result['type'] == 'constellation' or result['type'] == 'region':
             one_result.append(url_for('static', filename='img/' + result['type'] + '.png'))
         else:
@@ -443,6 +477,16 @@ def conditional_decode(entry, id_prefix):
         if result is not None:
             entry[id_prefix + 'name'] = result['name']
             entry[id_prefix + 'url'] = url_for(result['type'], entity_id=result['id'])
+            
+def context_decode(entry):
+    if 'context_id' in entry:
+        if isinstance(entry['context_id'], (list,)):
+            entry['location_id'] = entry['context_id'][0]
+            entry['type_id'] = entry['context_id'][1]
+            conditional_decode(entry, 'location_')
+            conditional_decode(entry, 'type_')
+        else:
+            conditional_decode(entry, 'context_')
 
 def redis_bytes_to_data(redis_object):
     decoded_object = {}

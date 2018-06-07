@@ -157,6 +157,11 @@
 	          <td>
               <a href='{{ entry.context_url }}' class="orange-link">{{ entry.context_name }}</a>
             </td>
+          {% elif entry.context_id_type == 'location_id type_id' and entry.location_name is defined and entry.type_name is defined %}
+            <td>
+              <a href='{{ entry.location_url }}' class="orange-link d-inline">{{ entry.location_name }}</a>, 
+              <a href='{{ entry.type_url }}' class="orange-link d-inline">{{ entry.type_name }}</a>
+            </td>
           {% else %}
 			      <td>{{ entry.context_id }}</td>
 			    {% endif %}
