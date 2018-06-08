@@ -361,6 +361,10 @@ def group(entity_id, page_number=1):
         abort(404)
     return context_id_routes({ '$in': entity_data['types'] }, 'group', page_number, entity_data)
 
+@app.route('/faq')
+def faq():
+    return render_template('faq.html')
+
 def context_id_routes(entity_id, context_type, page_number, entity_group_data=None):
     # ensure page is in valid range
     page_range_check(page_number)

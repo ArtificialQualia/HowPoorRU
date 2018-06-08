@@ -5,29 +5,33 @@
 {% endblock %}
 {% block content %}
   <div class="row align-items-center border-bottom border-dark">
-    <div class="col col-auto p-0">
-      <img class="portrait" src="https://image.eveonline.com/Character/{{ top_character.id }}_64.jpg" />
+    <div class="col p-0">
+      <table>
+        <tr>
+	        <td rowspan="3"><img class="portrait" src="https://image.eveonline.com/Character/{{ top_character.id }}_64.jpg" /></td>
+          <td><h5 class="m-0">Fattest Character</h5></td>
+	      </tr>
+        <tr>
+         <td><h5 class="m-0"><a href="{{ top_character.url }}">{{ top_character.name }}</a></h5></td>
+        </tr>
+        <tr>
+         <td><h5 class="m-0"><span class='positive-isk'>{{ '{0:0,.2f}'.format(top_character.wallet) }} ISK</span></h5></td>
+        </tr>
+      </table>
     </div>
     <div class="col p-0">
-     <h5 class="m-0">
-       Fattest Character
-       <br />
-       <a href="{{ top_character.url }}">{{ top_character.name }}</a>
-       <br />
-       <span class='positive-isk'>{{ '{0:0,.2f}'.format(top_character.wallet) }} ISK</span>
-     </h5>
-    </div>
-    <div class="col col-auto p-0">
-      <img class="portrait" src="https://image.eveonline.com/Corporation/{{ top_corp.id }}_64.png" />
-    </div>
-    <div class="col p-0">
-     <h5 class="m-0">
-       Fattest Corporation
-       <br />
-       <a href="{{ top_corp.url }}">{{ top_corp.name }}</a>
-       <br />
-       <span class='positive-isk'>{{ '{0:0,.2f}'.format(top_corp.wallet) }} ISK</span>
-     </h5>
+      <table>
+        <tr>
+          <td rowspan="3"><img class="portrait" src="https://image.eveonline.com/Corporation/{{ top_corp.id }}_64.png" /></td>
+          <td><h5 class="m-0">Fattest Corporation</h5></td>
+        </tr>
+        <tr>
+         <td><h5 class="m-0"><a href="{{ top_character.url }}">{{ top_corp.name }}</a></h5></td>
+        </tr>
+        <tr>
+         <td><h5 class="m-0"><span class='positive-isk'>{{ '{0:0,.2f}'.format(top_corp.wallet) }} ISK</span></h5></td>
+        </tr>
+      </table>
     </div>
   </div>
   <div class="row"><br /></div>

@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fa-svg-with-js.css') }}">
 		<link rel="stylesheet" href="{{ url_for('static', filename='css/howpoorru.css') }}">
 		<script src="{{ url_for('static', filename='js/jquery-3.3.1.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/popper.min.js') }}"></script>
 		<script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/jquery.doubleScroll.js') }}"></script>
     <script src="{{ url_for('static', filename='js/fontawesome-all.min.js') }}"></script>
@@ -16,35 +17,45 @@
 		{% endblock %}
 	</head>
 	<body>
-	  <div id="bg" class="container-fluid" style="background-image: url('{{ url_for('static', filename='img/background.jpg') }}')">
-	    <div id="header" class="navbar row">
-        <div class="col">
-          <a href="/" id="logo" class="white-link">
-	          <img class="isk-img" src="{{ url_for('static', filename='img/isk.png') }}" />HowPoor.RU
-	        </a>
-	      </div>
-	      <div class="col col-auto text-right">
-			    <form class="searchbar" autocomplete="off">
-            <input class="autocomplete" id="autocomplete" type="text" placeholder="Search.." data-action="{{ url_for('search') }}">
-			      <button type="submit" disabled><i class="fas fa-search"></i></button>
-			    </form>
-        </div>
-        <div class="col col-auto text-right" style="padding-right: 5px;">
+	  <div id="bg" class="container-fluid pb-1" style="background-image: url('{{ url_for('static', filename='img/background.jpg') }}')">
+	    <nav class="navbar navbar-dark navbar-expand-md pt-0 pb-0">
+        <a href="/" id="logo" class="navbar-brand white-link">
+          <img class="isk-img" src="{{ url_for('static', filename='img/isk.png') }}" />HowPoor.RU
+        </a>
+			  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false">
+			    <span class="navbar-toggler-icon"></span>
+			  </button>
+        <div class="collapse navbar-collapse" id="navbarNavDropdown">
+			    <ul class="navbar-nav mr-auto">
+			      <li class="nav-item">
+			        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+			      </li>
+			      <li class="nav-item">
+			        <a class="nav-link" href="{{ url_for('faq') }}">FAQ</a>
+			      </li>
+			    </ul>
+			    <div class="dropdown mr-4">
+				    <form class="d-table-row d-md-inline-block searchbar" autocomplete="off">
+	            <input class="autocomplete" id="autocomplete" type="text" placeholder="Search.." data-action="{{ url_for('search') }}">
+				      <button type="submit" disabled><i class="fas fa-search"></i></button>
+				    </form>
+				  </div>
 	        {% if current_user.is_authenticated %}
-	        <a href="{{ url_for('character', entity_id=current_user.character_id) }}" class="white-link">
-		        <img class="portrait" src="https://image.eveonline.com/Character/{{ current_user.character_id }}_32.jpg" />{{ current_user.character_name }}
-		      </a>
-	        <span class="dropdown">
-            <a href="#" class="dropdown-toggle white-link" data-toggle="dropdown"> <span class="caret"></span></a>
-            <ul class="dropdown-menu dropdown-menu-right logout-dropdown">
-              <li class="border-bottom border-dark"><a href="{{ url_for('account') }}" class="white-link"> Account</a></li>
-              <li><a href="{{ url_for('sso_pages.logout') }}" class="white-link"> Logout</a></li>
-            </ul>
-          </span>
+          <div class="dropdown d-inline-block">
+		        <a href="{{ url_for('character', entity_id=current_user.character_id) }}" class="d-inline-block my-1 my-lg-0 white-link">
+			        <img class="portrait pb-1" src="https://image.eveonline.com/Character/{{ current_user.character_id }}_32.jpg" />{{ current_user.character_name }}
+			      </a>
+	          <a href="#" class="dropdown-toggle white-link" data-toggle="dropdown" data-boundary="viewport"><span class="caret"></span></a>
+	          <div class="dropdown-menu dropdown-menu-right logout-dropdown m-0 border-0" style="min-width: 0px;">
+	            <a href="{{ url_for('account') }}" class="dropdown-item white-link"> Account</a>
+	            <div class="dropdown-divider"></div>
+	            <a href="{{ url_for('sso_pages.logout') }}" class="dropdown-item white-link"> Logout</a>
+	          </div>
+	        </div>
 	        {% else %}
 	        <div class="dropdown">
-		        <a href="#" class="dropdown-toggle white-link" data-toggle="dropdown">Login <span class="caret"></span></a>
-		        <ul class="dropdown-menu dropdown-menu-right login-dropdown">
+		        <a href="#" class="d-inline-block dropdown-toggle white-link my-2 my-lg-0" data-toggle="dropdown">Login <span class="caret"></span></a>
+		        <ul class="dropdown-menu dropdown-menu-right login-dropdown m-0 border-0">
 	            <li>
 	              <form action="{{ url_for('sso_pages.login') }}">
 		              <div class="form-group form-check">
@@ -74,17 +85,17 @@
 			      });
 			    </script>
 	        {% endif %}
-	      </div>
-      </div>
-	    <div id="content" class="">{% block content %}{% endblock %}</div>
-	    <div id="footer" class="row">
+		     </div>
+	     </nav>
+	    <div id="content" class="m-2">{% block content %}{% endblock %}</div>
+	    <div id="footer" class="row mr-2 ml-2">
 	      {% block footer %}
 	      <div class="col">
 	        Made by <a href="{{ url_for('character', entity_id=1858883174) }}" class="orange-link">Demogorgon Asmodeous</a>
 	      </div>
 	      <div class="col text-right">
-          <a href="https://github.com/ArtificialQualia/HowPoorRU" class="orange-link">GitHub</a>
-        </div>
+	         <a href="https://github.com/ArtificialQualia/HowPoorRU" class="orange-link">GitHub</a>
+	       </div>
 	      {% endblock %}
 	    </div>
     </div>

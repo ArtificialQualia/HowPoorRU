@@ -34,14 +34,6 @@ td a div{
 	height: 100%;
 }
 
-#header {
-	height: 50px;
-  line-height: 50px;
-	background-color: black;
-	color: white;
-	margin-bottom: 5px;
-}
-
 #bg { 
 	min-height: 100vh;
 	min-width: 100%;
@@ -64,14 +56,6 @@ td a div{
 	background-color: rgba(0, 0, 0, 0.6);
 	border-radius: 25px;
 	padding: 20px;
-	
-	margin-bottom: 5px;
-	margin-right: 5px;
-	margin-left: 5px;
-}
-
-#header .col-xs-6 {
-	padding: 0px;
 }
 
 #logo {
@@ -101,11 +85,13 @@ td a div{
 	color: white;
 }
 
+.dropdown-item:focus, .dropdown-item:hover {
+	background-color: grey;
+}
+
 .logout-dropdown {
   background-color: rgba(20, 20, 20, 1);
   line-height: normal;
-  padding-left: 10px;
-  padding-right: 10px;
   color: white;
 }
 
@@ -133,6 +119,15 @@ a.page-link:hover {
 	background-color: grey;
 	border-color: grey;
 	color: orange;
+}
+
+.navbar {
+	z-index: 100;
+	background-color: black;
+}
+
+.nav-link {
+  font-size: 18px;
 }
 
 .table-hover tbody tr:hover {
@@ -181,7 +176,6 @@ a.page-link:hover {
   color: white;
   line-height: normal;
   border: none;
-  margin-right: 4px;
   font-size: 16px;
 }
 
@@ -211,8 +205,16 @@ a.page-link:hover {
   /*position the autocomplete items to be the same width as the container:*/
   width: 350px;
   top: 100%;
-  left: -18px;
+  left: 0px;
 }
+
+
+@media only screen and (min-width : 768px) {
+	.autocomplete-items {
+    left: -34px;
+	}
+}
+
 .autocomplete-items div {
 	text-align: left;
   padding: 8px;

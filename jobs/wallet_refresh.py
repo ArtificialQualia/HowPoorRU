@@ -233,6 +233,8 @@ def decode_context_id(journal_entry, entity_doc, division):
         update_item(journal_entry['context_id'], 'ship')
     elif journal_entry['context_id_type'] == 'market_transaction_id':
         update_market_transaction(journal_entry, entity_doc, division)
+    elif journal_entry['context_id_type'] == 'station_id':
+        update_station(journal_entry['context_id'])
     else:
         return
     
