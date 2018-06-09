@@ -10,6 +10,9 @@ from datetime import timezone
 
 datetime_format = "%Y-%m-%dT%X"
 
+class JournalError(Exception):
+    pass
+
 @rq.job
 def process_character_wallets():
     try:
@@ -18,7 +21,10 @@ def process_character_wallets():
         user_cursor = shared.db.entities.find({ 'tokens': { '$exists': True } })
         
         for user_doc in user_cursor:
-            process_character(user_doc)
+            try:
+                process_character(user_doc)
+            except JournalError:
+                logger.error('Aborting character wallet processing for: ' + str(user_doc['id']))
             
         logger.debug('done character wallet refresh')
     except Exception as e:
@@ -36,7 +42,10 @@ def process_corp_wallets():
                                             {'corporation_id': { '$exists': True } }
                                             ] })
         for user_doc in user_cursor:
-            process_corp(user_doc)
+            try:
+                process_corp(user_doc)
+            except JournalError:
+                logger.error('Aborting corp wallet processing for: ' + str(user_doc['id']))
     
         logger.debug('done corp wallet refresh')
     except Exception as e:
@@ -85,7 +94,11 @@ def process_corp(user_doc):
     now_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
     if last_update + timedelta(hours=1) < now_utc:
         for wallet_division in range(1, 8):
+            missed_journal_string = 'missed_market_transactions_' + str(wallet_division)
+            missed_journal_ids = corp_doc.get(missed_journal_string) or []
+            process_missed_market_transactions(missed_journal_ids, corp_doc, wallet_division)
             journal_division_entries = process_journal(1, corp_doc, wallet_division)
+            corp_data_to_update[missed_journal_string] = corp_doc[missed_journal_string]
             if len(journal_division_entries) > 0:
                 corp_data_to_update['last_journal_entry_' + str(wallet_division)] = journal_division_entries[0]['id']
                 for entry in journal_division_entries:
@@ -118,7 +131,10 @@ def process_character(user_doc):
     last_update = datetime.fromtimestamp(user_doc.get('last_journal_update') or 0.0, timezone.utc)
     now_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
     if last_update + timedelta(hours=1) < now_utc:
+        missed_journal_ids = user_doc.get('missed_market_transactions') or []
+        process_missed_market_transactions(missed_journal_ids, user_doc)
         new_journal_entries = process_journal(1, user_doc)
+        data_to_update['missed_market_transactions'] = user_doc['missed_market_transactions']
         data_to_update['last_journal_update'] = now_utc.timestamp()
         if len(new_journal_entries) > 0:
             data_to_update['last_journal_entry'] = new_journal_entries[0]['id']
@@ -130,6 +146,29 @@ def process_character(user_doc):
     character_filter = {'id': user_doc['id']}
     update = {"$set": data_to_update}
     shared.db.entities.update_one(character_filter, update)
+        
+def process_missed_market_transactions(missed_journal_ids, entity_doc, division=None):
+    if division:
+        entity_doc['missed_market_transactions_' + str(division)] = []
+    else:
+        entity_doc['missed_market_transactions'] = []
+    
+    for missed_journal_id in missed_journal_ids:
+        id_filter = {'id': missed_journal_id}
+        result = shared.db.journals.find_one(id_filter)
+        if result is None:
+            logger.error('journal entry in missed market transactions array not found, this should never happen')
+            logger.error('entity with error: ' + str(entity_doc['id']) + ' journal entry error: ' + str(missed_journal_id))
+            continue
+        if 'context_id' in result and result['context_id_type'] == 'market_transaction_id':
+            update_market_transaction(result, entity_doc, division)
+            id_filter = {'id': result['id']}
+            update = {'$set': result}
+            shared.db.journals.update_one(id_filter, update)
+        else:
+            logger.error('journal entry in missed market transactions array has wrong context_id/type, this should never happen.')
+            logger.error('entity with error: ' + str(entity_doc['id']) + ' journal entry error: ' + str(missed_journal_id))
+        
         
 def refresh_token(user_doc, data_to_update={}):
     access_token_expires = datetime.strptime(user_doc['tokens']['ExpiresOn'], datetime_format)
@@ -172,7 +211,7 @@ def process_journal(page, entity_doc, division=None):
         logger.error('status: ' + str(journal.status) + ' error with getting journal data: ' + str(journal.data))
         logger.error('headers: ' + str(journal.header))
         logger.error('error with getting journal data: ' + str(entity_doc['id']))
-        return
+        raise JournalError()
     num_pages = int(journal.header['X-Pages'][0])
     new_journal_entries = []
     for journal_entry in journal.data:
@@ -196,14 +235,18 @@ def process_journal(page, entity_doc, division=None):
                     journal_entry['tax_receiver_wallet_division'] = division
             else:
                 logger.error('Dont know what to do with: ' + str(journal_entry))
+                logger.error('This may be a corp transaction that doesnt have the corp listed')
                 logger.error('Entity with error: ' + str(entity_doc['id']))
+                journal_entry['second_party_amount'] = abs(journal_entry.pop('amount'))
+                journal_entry['first_party_amount'] = journal_entry['second_party_amount'] * -1
             decode_journal_entry(journal_entry, entity_doc, division)
             new_journal_entries.append(journal_entry)
         else:
             return new_journal_entries
     if page < num_pages:
         next_pages_entries = process_journal(page+1, entity_doc, division)
-        return new_journal_entries.extend(next_pages_entries)
+        if next_pages_entries:
+            return new_journal_entries.extend(next_pages_entries)
     return new_journal_entries
     
 def decode_journal_entry(journal_entry, entity_doc, division):
@@ -241,19 +284,21 @@ def decode_context_id(journal_entry, entity_doc, division):
 def update_market_transaction(journal_entry, entity_doc, division):
     if not division:
         op = shared.esiapp.op['get_characters_character_id_wallet_transactions'](
-            character_id=entity_doc['id']
+            character_id=entity_doc['id'],
+            from_id=journal_entry['context_id']
         )
     else:
-        op = shared.esiapp.op['get_characters_character_id_wallet_transactions'](
+        op = shared.esiapp.op['get_corporations_corporation_id_wallets_division_transactions'](
             corporation_id=entity_doc['id'],
-            division=division
+            division=division,
+            from_id=journal_entry['context_id']
         )
     public_data = shared.esiclient.request(op)
     if public_data.status != 200:
         logger.error('status: ' + str(public_data.status) + ' error with getting market transaction: ' + str(public_data.data))
         logger.error('headers: ' + str(public_data.header))
         logger.error('entity with error: ' + str(entity_doc['id']))
-        return
+        public_data.data = []
     for transaction in public_data.data:
         if transaction['transaction_id'] == journal_entry['context_id']:
             journal_entry['transaction_context_id'] = journal_entry['context_id']
@@ -271,6 +316,17 @@ def update_market_transaction(journal_entry, entity_doc, division):
             if result is None:
                 update_station(transaction['location_id'])
             return
+        elif transaction['transaction_id'] < journal_entry['context_id']:
+            break
+    logger.info('market transaction ID not found in transaction data, probably bad cache timing.  Will try again later.')
+    if division:
+        missed_journal_ids = entity_doc.get('missed_market_transactions_' + str(division)) or []
+        missed_journal_ids.append(journal_entry['id'])
+        entity_doc['missed_market_transactions_' + str(division)] = missed_journal_ids
+    else:
+        missed_journal_ids = entity_doc.get('missed_market_transactions') or []
+        missed_journal_ids.append(journal_entry['id'])
+        entity_doc['missed_market_transactions'] = missed_journal_ids
     
 def update_station(station_id):
     data_to_update = {}
@@ -297,7 +353,9 @@ def update_station(station_id):
     if result is None:
         update_system(public_data.data['system_id'])
     
-    shared.db.entities.insert_one(data_to_update)
+    data_to_update_id = {'id': data_to_update['id']}
+    update = {"$set": data_to_update}
+    shared.db.entities.update_one(data_to_update_id, update, upsert=True)
     
 
 def update_system(system_id):
@@ -333,7 +391,9 @@ def update_system(system_id):
         data_to_update['region_name'] = result['region_name']
         data_to_update['region_id'] = result['region_id']
     
-    shared.db.entities.insert_one(data_to_update)
+    data_to_update_id = {'id': data_to_update['id']}
+    update = {"$set": data_to_update}
+    shared.db.entities.update_one(data_to_update_id, update, upsert=True)
 
 def update_constellation(constellation_id):
     data_to_update = {}
@@ -362,7 +422,9 @@ def update_constellation(constellation_id):
     else:
         data_to_update['region_name'] = result['name']
     
-    shared.db.entities.insert_one(data_to_update)
+    data_to_update_id = {'id': data_to_update['id']}
+    update = {"$set": data_to_update}
+    shared.db.entities.update_one(data_to_update_id, update, upsert=True)
     return data_to_update['name'], data_to_update['region_name'], public_data.data['region_id']
 
 def update_region(region_id):
@@ -382,7 +444,9 @@ def update_region(region_id):
     data_to_update['constellations'] = public_data.data['constellations']
     data_to_update['description'] = public_data.data['description']
     
-    shared.db.entities.insert_one(data_to_update)
+    data_to_update_id = {'id': data_to_update['id']}
+    update = {"$set": data_to_update}
+    shared.db.entities.update_one(data_to_update_id, update, upsert=True)
     return data_to_update['name']
 
 def update_item(item_id, item_type):
@@ -421,6 +485,10 @@ def update_item(item_id, item_type):
         group_data['type'] = 'group'
         group_data['types'] = public_data.data['types']
         group_data['name'] = public_data.data['name']
-        shared.db.entities.insert_one(group_data)
+        data_to_update_id = {'id': group_data['id']}
+        update = {"$set": group_data}
+        shared.db.entities.update_one(data_to_update_id, update, upsert=True)
         
-    shared.db.entities.insert_one(data_to_update)
+    data_to_update_id = {'id': data_to_update['id']}
+    update = {"$set": data_to_update}
+    shared.db.entities.update_one(data_to_update_id, update, upsert=True)

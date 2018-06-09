@@ -106,3 +106,7 @@ def callback():
 def load_user(character_id):
     """ Required user loader for Flask-Login """
     return User(character_id=character_id, mongo=mongo)
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    return redirect(url_for("sso_pages.login", char_scope='esi-wallet.read_character_wallet.v1', corp_scope='esi-wallet.read_corporation_wallets.v1'))

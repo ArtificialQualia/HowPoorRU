@@ -245,6 +245,10 @@ a.page-link:hover {
 	border-color: rgba(160, 160, 160, 1) rgba(160, 160, 160, 1) white;
 }
 
+.nav-tabs .nav-link {
+	font-size: 16px;
+}
+
 .fa-2x {
 	font-size: 24px;
 }

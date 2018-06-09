@@ -43,7 +43,7 @@
 	        {% if current_user.is_authenticated %}
           <div class="dropdown d-inline-block">
 		        <a href="{{ url_for('character', entity_id=current_user.character_id) }}" class="d-inline-block my-1 my-lg-0 white-link">
-			        <img class="portrait pb-1" src="https://image.eveonline.com/Character/{{ current_user.character_id }}_32.jpg" />{{ current_user.character_name }}
+			        <img class="portrait" src="https://image.eveonline.com/Character/{{ current_user.character_id }}_32.jpg" />{{ current_user.character_name }}
 			      </a>
 	          <a href="#" class="dropdown-toggle white-link" data-toggle="dropdown" data-boundary="viewport"><span class="caret"></span></a>
 	          <div class="dropdown-menu dropdown-menu-right logout-dropdown m-0 border-0" style="min-width: 0px;">

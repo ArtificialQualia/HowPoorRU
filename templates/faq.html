@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+  <title>FAQ - HowPoor.RU</title>
+{% endblock %}
+{% block content %}
+  <div class="row border-bottom border-dark"><h3>FAQ</h3></div>
+  <div class="row border-bottom border-dark p-2">
+    <div class="row w-100"><h5>What is this?</h5></div>
+    <div>
+      HowPoor.RU is similar to an EVE killboard, but instead of tracking killmails it tracks wallets.
+      Both corporation and personal wallets are supported, and all information is made available on the site.
+    </div>
+  </div>
+  <div class="row border-bottom border-dark p-2">
+    <div class="row w-100"><h5>How often does HowPoor.RU update?</h5></div>
+    <div>
+	    Character wallets update every 2 minutes.
+	    <br />
+	    Corp wallets update every 5 minutes.
+	    <br />
+	    Journal transactions update every hour.
+	    <br />
+	    This means that sometimes the wallet amount may not be in sync with your journal transactions.
+	    If there is a difference between the wallet amount and the amount field on the latest transaction,
+	    the journal transactions are probably a bit behind.
+    </div>
+  </div>
+  <div class="row border-bottom border-dark p-2">
+    <div class="row w-100"><h5>Can I remove my data?</h5></div>
+    <div>
+      No, once your data is public there is no removing it.
+      <br />
+      However, you can remove your ESI scopes to prevent new wallet data from being added.  Visit the <a href="{{ url_for('account') }}">account</a> page to manage your ESI scopes.
+    </div>
+  </div>
+  <div class="row border-bottom border-dark p-2">
+    <div class="row w-100"><h5>Why are there wallet transactions for my character?  I've never logged in!</h5></div>
+    <div>
+      Even if you have never logged in to HowPoor.RU, if you are involved in a transaction with someone who is on the site that transaction will show on your page.
+      <br />
+      Some information will be missing, like your wallet amount at the time of the transaction, and of course not all transactions that you are involved in will be displayed.
+    </div>
+  </div>
+  <div class="row border-bottom border-dark p-2">
+    <div class="row w-100"><h5>Why do some transactions just have numbers for the 'context' field?</h5></div>
+    <div>
+      This happens when the context number can't be turned into something that HowPoor.RU can deal with.  This is the case for things like citadels IDs, contract IDs,
+      and other things that would require additional ESI scopes to handle.
+    </div>
+  </div>
+  <div class="row border-bottom border-dark p-2">
+    <div class="row w-100"><h5>I tried searching for (x) and got no results!</h5></div>
+    <div>
+      HowPoor.RU populates its database dynamically.  If HowPoor.RU hasn't encountered what you are searching for in a wallet transaction yet, it won't appear in search results.
+    </div>
+  </div>
+  <div class="row border-bottom border-dark p-2">
+    <div class="row w-100"><h5>I think there is a bug/I'd like to see a new feature added</h5></div>
+    <div>
+      Please use the <a href="https://github.com/ArtificialQualia/HowPoorRU/issues">issues</a> page on GitHub for all bug reports and feature requests.
+    </div>
+  </div>
+{% endblock %}
