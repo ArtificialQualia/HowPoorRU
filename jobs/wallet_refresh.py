@@ -250,7 +250,7 @@ def process_journal(page, entity_doc, division=None):
     return new_journal_entries
     
 def decode_journal_entry(journal_entry, entity_doc, division):
-    journal_entry['date'] = journal_entry['date'].v.replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %X")
+    journal_entry['date'] = journal_entry['date'].v.replace(tzinfo=timezone.utc).timestamp()
     
     shared.decode_party_id(journal_entry['first_party_id'])
     shared.decode_party_id(journal_entry['second_party_id'])
@@ -272,7 +272,7 @@ def decode_context_id(journal_entry, entity_doc, division):
         shared.corp_update(journal_entry['context_id'])
     elif journal_entry['context_id_type'] == 'system_id':
         update_system(journal_entry['context_id'])
-    elif journal_entry['context_id_type'] == 'eve_system':
+    elif journal_entry['context_id_type'] == 'eve_system' or journal_entry['context_id_type'] == 'type_id':
         update_item(journal_entry['context_id'], 'ship')
     elif journal_entry['context_id_type'] == 'market_transaction_id':
         update_market_transaction(journal_entry, entity_doc, division)
@@ -282,6 +282,9 @@ def decode_context_id(journal_entry, entity_doc, division):
         return
     
 def update_market_transaction(journal_entry, entity_doc, division):
+    #CCPls fix bug
+    if journal_entry['context_id'] == 1:
+        return
     if not division:
         op = shared.esiapp.op['get_characters_character_id_wallet_transactions'](
             character_id=entity_doc['id'],
@@ -298,27 +301,30 @@ def update_market_transaction(journal_entry, entity_doc, division):
         logger.error('status: ' + str(public_data.status) + ' error with getting market transaction: ' + str(public_data.data))
         logger.error('headers: ' + str(public_data.header))
         logger.error('entity with error: ' + str(entity_doc['id']))
-        public_data.data = []
-    for transaction in public_data.data:
-        if transaction['transaction_id'] == journal_entry['context_id']:
-            journal_entry['transaction_context_id'] = journal_entry['context_id']
-            journal_entry['transaction_context_type'] = journal_entry['context_id_type']
-            journal_entry['unit_price'] = transaction['unit_price']
-            journal_entry['quantity'] = transaction['quantity']
-            journal_entry['context_id_type'] = 'location_id type_id'
-            journal_entry['context_id'] = [transaction['location_id'], transaction['type_id']]
-            id_filter = {'id': transaction['type_id']}
-            result = shared.db.entities.find_one(id_filter)
-            if result is None:
-                update_item(transaction['type_id'], 'item')
-            id_filter = {'id': transaction['location_id']}
-            result = shared.db.entities.find_one(id_filter)
-            if result is None:
-                update_station(transaction['location_id'])
-            return
-        elif transaction['transaction_id'] < journal_entry['context_id']:
-            break
-    logger.info('market transaction ID not found in transaction data, probably bad cache timing.  Will try again later.')
+    else:
+        for transaction in public_data.data:
+            if transaction['transaction_id'] == journal_entry['context_id']:
+                journal_entry['transaction_context_id'] = journal_entry['context_id']
+                journal_entry['transaction_context_type'] = journal_entry['context_id_type']
+                journal_entry['unit_price'] = transaction['unit_price']
+                journal_entry['quantity'] = transaction['quantity']
+                journal_entry['context_id_type'] = 'location_id type_id'
+                journal_entry['context_id'] = [transaction['location_id'], transaction['type_id']]
+                id_filter = {'id': transaction['type_id']}
+                result = shared.db.entities.find_one(id_filter)
+                if result is None:
+                    update_item(transaction['type_id'], 'item')
+                id_filter = {'id': transaction['location_id']}
+                result = shared.db.entities.find_one(id_filter)
+                if result is None:
+                    update_station(transaction['location_id'])
+                if journal_entry['ref_type'] == 'market_escrow' and journal_entry['first_party_id'] == journal_entry['second_party_id']:
+                    journal_entry['second_party_id'] = transaction['client_id']
+                    shared.decode_party_id(journal_entry['second_party_id'])
+                return
+            elif transaction['transaction_id'] < journal_entry['context_id']:
+                break
+    logger.info('market transaction ID ' + str(journal_entry['context_id']) + ' not found in transaction data, probably bad cache timing.  Will try again later.')
     if division:
         missed_journal_ids = entity_doc.get('missed_market_transactions_' + str(division)) or []
         missed_journal_ids.append(journal_entry['id'])

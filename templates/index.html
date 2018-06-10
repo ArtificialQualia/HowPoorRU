@@ -5,7 +5,7 @@
 {% endblock %}
 {% block content %}
   <div class="row align-items-center border-bottom border-dark">
-    <div class="col p-0">
+    <div class="col-md col-sm-12 p-0">
       <table>
         <tr>
 	        <td rowspan="3"><img class="portrait" src="https://image.eveonline.com/Character/{{ top_character.id }}_64.jpg" /></td>
@@ -15,11 +15,37 @@
          <td><h5 class="m-0"><a href="{{ top_character.url }}">{{ top_character.name }}</a></h5></td>
         </tr>
         <tr>
-         <td><h5 class="m-0"><span class='positive-isk'>{{ '{0:0,.2f}'.format(top_character.wallet) }} ISK</span></h5></td>
+         <td><h5 class="m-0"><span class='positive-isk'>{{ '{0:0,.2f}'.format(top_character.wallet or 0) }} ISK</span></h5></td>
         </tr>
       </table>
     </div>
-    <div class="col col-auto p-0">
+    <div class="col-md p-0 d-none d-lg-block">
+      <table class="table-hover">
+        <tr class="transaction-row-click" data-toggle="modal" data-target="#transaction_{{ top_tx.id }}"><td>
+	        <h6 class="m-0">
+		        Top Transaction Past Day:
+		      </h6>
+	        <h6 class="m-0">
+			      {% if top_tx.first_party_name is defined %}
+			      First Party: <a href='{{ top_tx.first_party_url }}' class="d-inline-block orange-link">{{ top_tx.first_party_name }}</a>
+			      {% else %}
+			      First Party: {{ top_tx.first_party_id }}
+			      {% endif %}
+	        </h6>
+	        <h6 class="m-0">
+			      {% if top_tx.second_party_name is defined %}
+			      Second Party: <a href='{{ top_tx.second_party_url }}' class="d-inline-block orange-link">{{ top_tx.second_party_name }}</a>
+			      {% else %}
+			      Second Party: {{ top_tx.second_party_id }}
+			      {% endif %}
+	        </h6>
+	        <h6 class="m-0">
+		        <span class='positive-isk'>{{ '{0:0,.2f}'.format(top_tx.second_party_amount or 0) }} ISK</span>
+	        </h6>
+        </td></tr>
+      </table>
+    </div>
+    <div class="col-auto p-0">
       <table>
         <tr>
           <td rowspan="3"><img class="portrait" src="https://image.eveonline.com/Corporation/{{ top_corp.id }}_64.png" /></td>
@@ -29,7 +55,7 @@
          <td><h5 class="m-0"><a href="{{ top_character.url }}">{{ top_corp.name }}</a></h5></td>
         </tr>
         <tr>
-         <td><h5 class="m-0"><span class='positive-isk'>{{ '{0:0,.2f}'.format(top_corp.wallet) }} ISK</span></h5></td>
+         <td><h5 class="m-0"><span class='positive-isk'>{{ '{0:0,.2f}'.format(top_corp.wallet or 0) }} ISK</span></h5></td>
         </tr>
       </table>
     </div>
@@ -39,4 +65,88 @@
 	  <h3 class="text-center col">Latest Transactions:</h3>
 	</div>
   {% include 'journal_entries.html' %}
+	<div class="modal fade" tabindex="-1" role="dialog" id="transaction_{{ top_tx.id }}">
+	  <div class="modal-dialog modal-lg">
+	    <div class="modal-content">
+	
+	      <!-- Modal Header -->
+	      <div class="modal-header">
+	        <h4 class="modal-title text-center">Transaction Details</h4>
+	        <button type="button" class="close" data-dismiss="modal">&times;</button>
+	      </div>
+	
+	      <!-- Modal body -->
+	      <div class="modal-body">
+	        <div class="double-scroll table-responsive">
+	          <table class="table table-hover table-bordered">
+	            <thead>
+	              <tr>
+	                <th scope="col">Key</th>
+	                <th scope="col">Value</th>
+	              </tr>
+	            </thead>
+	            <tbody>
+	              {% for key, value in top_tx.items() %}
+	              {% if key == 'first_party_name' %}
+	              <tr>
+	                <th scope="row">{{ key }}</th>
+	                <td>
+	                  <a href='{{ top_tx.first_party_url }}' class="orange-link">{{ value }}</a>
+	                </td>
+	              </tr>
+	              {% elif key == 'second_party_name' %}
+	              <tr>
+	                <th scope="row">{{ key }}</th>
+	                <td>
+	                  <a href='{{ top_tx.second_party_url }}' class="orange-link">{{ value }}</a>
+	                </td>
+	              </tr>
+	              {% elif key == 'tax_receiver_name' %}
+	              <tr>
+	                <th scope="row">{{ key }}</th>
+	                <td>
+	                  <a href='{{ tax_receiver_url }}' class="orange-link">{{ value }}</a>
+	                </td>
+	              </tr>
+	             {% elif key == 'context_name' %}
+	             <tr>
+	                 <th scope="row">{{ key }}</th>
+	               <td>
+	                 <a href='{{ top_tx.context_url }}' class="orange-link">{{ top_tx.context_name }}</a>
+	               </td>
+	             </tr>
+	            {% elif key == 'location_name' %}
+	             <tr>
+	                 <th scope="row">{{ key }}</th>
+	               <td>
+	                 <a href='{{ top_tx.location_url }}' class="orange-link">{{ top_tx.location_name }}</a>
+	               </td>
+	             </tr>
+	            {% elif key == 'type_name' %}
+	             <tr>
+	                 <th scope="row">{{ key }}</th>
+	               <td>
+	                 <a href='{{ top_tx.type_url }}' class="orange-link">{{ top_tx.type_name }}</a>
+	               </td>
+	             </tr>
+	              {% elif (key != '_id') and not (key.endswith('url')) %}
+	              <tr>
+	                <th scope="row">{{ key }}</th>
+	                <td>{{ value }}</td>
+	              </tr>
+	              {% endif %}
+	              {% endfor %}
+	            </tbody>
+	          </table>
+	        </div>
+	      </div>
+	
+	      <!-- Modal footer -->
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+	      </div>
+	
+	    </div>
+	  </div>
+	</div>
 {% endblock %}

@@ -13,7 +13,7 @@
         <tr>
           <th scope="row">Name:</th>
           <td>
-            <a href="{{ url_for('constellation', entity_id=entity_data.id) }}" class="orange-link">
+            <a href="{{ url_for('.constellation', entity_id=entity_data.id) }}" class="orange-link">
               {{ entity_data.name }}
             </a>
           </td>
@@ -21,7 +21,7 @@
         <tr>
           <th scope="row">Region:</th>
           <td>
-            <a href="{{ url_for('region', entity_id=entity_data.region_id) }}" class="orange-link">
+            <a href="{{ url_for('.region', entity_id=entity_data.region_id) }}" class="orange-link">
               {{ entity_data.region_name }}
             </a>
           </td>

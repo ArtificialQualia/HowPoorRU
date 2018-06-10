@@ -22,7 +22,7 @@
 	      {% for entry in user.scopes %}
 	      <tr>
 	        <td class="align-middle">{{ entry }}</td>
-	        <td><a class="btn btn-danger white-link" href="{{ url_for('account', remove_scope=entry) }}">Remove</a></td>
+	        <td><a class="btn btn-danger white-link" href="{{ url_for('.account', remove_scope=entry) }}">Remove</a></td>
 	      </tr>
 	      {% endfor %}
 	    </tbody>

@@ -13,7 +13,7 @@
         <tr>
           <th scope="row">Name:</th>
           <td>
-            <a href="{{ url_for('ship', entity_id=entity_data.id) }}" class="orange-link">
+            <a href="{{ url_for('.ship', entity_id=entity_data.id) }}" class="orange-link">
               {{ entity_data.name }}
             </a>
           </td>
@@ -21,7 +21,7 @@
         <tr>
           <th scope="row">Group:</th>
           <td>
-            <a href="{{ url_for('group', entity_id=entity_data.group_id) }}" class="orange-link">
+            <a href="{{ url_for('.group', entity_id=entity_data.group_id) }}" class="orange-link">
               {{ entity_data.group_name }}
             </a>
           </td>

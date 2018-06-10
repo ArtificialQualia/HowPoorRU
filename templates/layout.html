@@ -18,7 +18,7 @@
 	</head>
 	<body>
 	  <div id="bg" class="container-fluid pb-1" style="background-image: url('{{ url_for('static', filename='img/background.jpg') }}')">
-	    <nav class="navbar navbar-dark navbar-expand-md pt-0 pb-0">
+	    <nav class="navbar navbar-dark navbar-expand-lg pt-0 pb-0">
         <a href="/" id="logo" class="navbar-brand white-link">
           <img class="isk-img" src="{{ url_for('static', filename='img/isk.png') }}" />HowPoor.RU
         </a>
@@ -28,26 +28,26 @@
         <div class="collapse navbar-collapse" id="navbarNavDropdown">
 			    <ul class="navbar-nav mr-auto">
 			      <li class="nav-item">
-			        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+			        <a class="nav-link" href="{{ url_for('.index') }}">Home</a>
 			      </li>
 			      <li class="nav-item">
-			        <a class="nav-link" href="{{ url_for('faq') }}">FAQ</a>
+			        <a class="nav-link" href="{{ url_for('.faq') }}">FAQ</a>
 			      </li>
 			    </ul>
 			    <div class="dropdown mr-4">
 				    <form class="d-table-row d-md-inline-block searchbar" autocomplete="off">
-	            <input class="autocomplete" id="autocomplete" type="text" placeholder="Search.." data-action="{{ url_for('search') }}">
+	            <input class="autocomplete" id="autocomplete" type="text" placeholder="Search.." data-action="{{ url_for('.search') }}">
 				      <button type="submit" disabled><i class="fas fa-search"></i></button>
 				    </form>
 				  </div>
 	        {% if current_user.is_authenticated %}
           <div class="dropdown d-inline-block">
-		        <a href="{{ url_for('character', entity_id=current_user.character_id) }}" class="d-inline-block my-1 my-lg-0 white-link">
+		        <a href="{{ url_for('.character', entity_id=current_user.character_id) }}" class="d-inline-block my-1 my-lg-0 white-link">
 			        <img class="portrait" src="https://image.eveonline.com/Character/{{ current_user.character_id }}_32.jpg" />{{ current_user.character_name }}
 			      </a>
 	          <a href="#" class="dropdown-toggle white-link" data-toggle="dropdown" data-boundary="viewport"><span class="caret"></span></a>
 	          <div class="dropdown-menu dropdown-menu-right logout-dropdown m-0 border-0" style="min-width: 0px;">
-	            <a href="{{ url_for('account') }}" class="dropdown-item white-link"> Account</a>
+	            <a href="{{ url_for('.account') }}" class="dropdown-item white-link"> Account</a>
 	            <div class="dropdown-divider"></div>
 	            <a href="{{ url_for('sso_pages.logout') }}" class="dropdown-item white-link"> Logout</a>
 	          </div>
@@ -91,7 +91,7 @@
 	    <div id="footer" class="row mr-2 ml-2">
 	      {% block footer %}
 	      <div class="col">
-	        Made by <a href="{{ url_for('character', entity_id=1858883174) }}" class="orange-link">Demogorgon Asmodeous</a>
+	        Made by <a href="{{ url_for('.character', entity_id=1858883174) }}" class="orange-link">Demogorgon Asmodeous</a>
 	      </div>
 	      <div class="col text-right">
 	         <a href="https://github.com/ArtificialQualia/HowPoorRU" class="orange-link">GitHub</a>
