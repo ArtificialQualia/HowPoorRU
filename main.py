@@ -62,6 +62,8 @@ try:
                                            partialFilterExpression={ 'tax_receiver_id': { '$exists': True } })
             mongo.db.journals.create_index([('context_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
                                            partialFilterExpression={ 'context_id': { '$exists': True } })
+            mongo.db.journals.create_index([('corp_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
+                                           partialFilterExpression={ 'corp_id': { '$exists': True } })
 except ImportError as e:
     print('can\'t import uwsgidecorators, if this is a dev environment, please run DB setup manually')
 

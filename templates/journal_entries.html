@@ -75,6 +75,12 @@
             {% else %}
             <td>N/A</td>
             {% endif%}
+          {% elif entity_data.id == entry.corp_id %}
+            {% if entry.corp_balance is defined %}
+            <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.corp_balance) }}</td>
+            {% else %}
+            <td>N/A</td>
+            {% endif%}
           {% elif entry.tax_receiver_id is defined and entity_data.id == entry.tax_receiver_id %}
             {% if entry.tax_receiver_balance is defined %}
             <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.tax_receiver_balance) }}</td>
@@ -114,6 +120,14 @@
             {% else %}
             <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.second_party_amount) }}</td>
             {% endif%}
+          {% elif entity_data.id == entry.corp_id or entry.corp_id in entity_data.corps %}
+            {% if entry.corp_amount < 0 %}
+            <td class='negative-isk'>{{ '{0:0,.2f}'.format(entry.corp_amount) }}</td>
+            {% elif entry.corp_amount == 0.0 %}
+            <td><b>0.0</b></td>
+            {% else %}
+            <td class='positive-isk'>{{ '{0:0,.2f}'.format(entry.corp_amount) }}</td>
+            {% endif%}
           {% else %}
             {% if entry.second_party_amount < 0 %}
             <td class='negative-isk'>{{ '{0:0,.2f}'.format(entry.second_party_amount) }}</td>
@@ -132,6 +146,8 @@
           <td>{{ entry.first_party_wallet_division }}</td>
           {% elif (entity_data.id == entry.second_party_id) and (entry.second_party_wallet_division is defined) %}
           <td>{{ entry.second_party_wallet_division }}</td>
+          {% elif (entity_data.id == entry.corp_id) and (entry.corp_wallet_division is defined) %}
+          <td>{{ entry.corp_wallet_division }}</td>
           {% elif (entry.tax_receiver_id is defined) and (entity_data.id == entry.tax_receiver_id) and (entry.tax_receiver_wallet_division is defined) %}
           <td>{{ entry.tax_receiver_wallet_division }}</td>
           {% else %}
@@ -233,6 +249,13 @@
                 <th scope="row">{{ key }}</th>
                 <td>
                   <a href='{{ entry.second_party_url }}' class="orange-link">{{ value }}</a>
+                </td>
+              </tr>
+              {% elif key == 'corp_name' %}
+              <tr>
+                <th scope="row">{{ key }}</th>
+                <td>
+                  <a href='{{ entry.corp_url }}' class="orange-link">{{ value }}</a>
                 </td>
               </tr>
               {% elif key == 'tax_receiver_name' %}

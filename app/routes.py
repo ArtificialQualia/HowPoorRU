@@ -56,15 +56,15 @@ def index(page_number=1, *args):
         
     top_character_bytes = r.hgetall('top_character_wallet')
     top_character = redis_bytes_to_data(top_character_bytes)
-    top_character['url'] = url_for('.character', entity_id=top_character['id'])
+    top_character['url'] = url_for('.character', entity_id=top_character.get('id') or 0)
         
     top_corp_bytes = r.hgetall('top_corp_wallet')
     top_corp = redis_bytes_to_data(top_corp_bytes)
-    top_corp['url'] = url_for('.corporation', entity_id=top_corp['id'])
+    top_corp['url'] = url_for('.corporation', entity_id=top_corp.get('id') or 0)
         
     top_tx_bytes = r.hgetall('top_tx_day')
     top_tx = redis_bytes_to_data(top_tx_bytes)
-    top_tx = mongo.db.journals.find_one({'id': top_tx['id']})
+    top_tx = mongo.db.journals.find_one({'id': top_tx.get('id') or 0})
     if top_tx:
         process_common_fields(top_tx)
         top_tx = OrderedDict(sorted(top_tx.items(), key=lambda x: x[0]))
@@ -446,6 +446,7 @@ def make_entity_filter(entity_filter, tx_type):
         journal_search = {'$or':[ 
             {'first_party_id': entity_filter},
             {'second_party_id': entity_filter},
+            {'corp_id': entity_filter},
             {'tax_receiver_id': entity_filter},
             {'context_id': entity_filter}
         ]}
@@ -453,17 +454,20 @@ def make_entity_filter(entity_filter, tx_type):
         journal_search = {'$or':[ 
             {'$and': [{'first_party_id': entity_filter}, {'first_party_amount': {'$gt': 0}}]},
             {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$gt': 0}}]},
+            {'$and': [{'corp_id': entity_filter}, {'corp_amount': {'$gt': 0}}]},
             {'tax_receiver_id': entity_filter}
         ]}
     elif tx_type == 'losses':
         journal_search = {'$or':[ 
             {'$and': [{'first_party_id': entity_filter}, {'first_party_amount': {'$lt': 0}}]},
-            {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$lt': 0}}]}
+            {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$lt': 0}}]},
+            {'$and': [{'corp_id': entity_filter}, {'corp_amount': {'$lt': 0}}]},
         ]}
     elif tx_type == 'neutral':
         journal_search = {'$or':[ 
             {'$and': [{'first_party_id': entity_filter}, {'first_party_amount': {'$eq': 0}}]},
             {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$eq': 0}}]},
+            {'$and': [{'corp_id': entity_filter}, {'corp_amount': {'$eq': 0}}]},
             {'context_id': entity_filter}
         ]}
     return journal_search
@@ -473,4 +477,5 @@ def process_common_fields(entry):
     conditional_decode(entry, 'tax_receiver_')
     conditional_decode(entry, 'first_party_')
     conditional_decode(entry, 'second_party_')
+    conditional_decode(entry, 'corp_')
     context_decode(entry)

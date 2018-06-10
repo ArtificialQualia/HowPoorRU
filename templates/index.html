@@ -52,7 +52,7 @@
           <td><h5 class="m-0">Fattest Corporation</h5></td>
         </tr>
         <tr>
-         <td><h5 class="m-0"><a href="{{ top_character.url }}">{{ top_corp.name }}</a></h5></td>
+         <td><h5 class="m-0"><a href="{{ top_corp.url }}">{{ top_corp.name }}</a></h5></td>
         </tr>
         <tr>
          <td><h5 class="m-0"><span class='positive-isk'>{{ '{0:0,.2f}'.format(top_corp.wallet or 0) }} ISK</span></h5></td>
@@ -101,25 +101,32 @@
 	                  <a href='{{ top_tx.second_party_url }}' class="orange-link">{{ value }}</a>
 	                </td>
 	              </tr>
+	              {% elif key == 'corp_name' %}
+	              <tr>
+	                <th scope="row">{{ key }}</th>
+	                <td>
+	                  <a href='{{ top_tx.corp_url }}' class="orange-link">{{ value }}</a>
+	                </td>
+	              </tr>
 	              {% elif key == 'tax_receiver_name' %}
 	              <tr>
 	                <th scope="row">{{ key }}</th>
 	                <td>
-	                  <a href='{{ tax_receiver_url }}' class="orange-link">{{ value }}</a>
+	                  <a href='{{ top_tx.tax_receiver_url }}' class="orange-link">{{ value }}</a>
 	                </td>
 	              </tr>
 	             {% elif key == 'context_name' %}
 	             <tr>
 	                 <th scope="row">{{ key }}</th>
 	               <td>
-	                 <a href='{{ top_tx.context_url }}' class="orange-link">{{ top_tx.context_name }}</a>
+	                 <a href='{{ top_tx.context_url }}' class="orange-link">{{ value }}</a>
 	               </td>
 	             </tr>
 	            {% elif key == 'location_name' %}
 	             <tr>
 	                 <th scope="row">{{ key }}</th>
 	               <td>
-	                 <a href='{{ top_tx.location_url }}' class="orange-link">{{ top_tx.location_name }}</a>
+	                 <a href='{{ top_tx.location_url }}' class="orange-link">{{ value }}</a>
 	               </td>
 	             </tr>
 	            {% elif key == 'type_name' %}
