@@ -136,7 +136,7 @@
 	                 <a href='{{ top_tx.type_url }}' class="orange-link">{{ top_tx.type_name }}</a>
 	               </td>
 	             </tr>
-	              {% elif (key != '_id') and not (key.endswith('url')) %}
+	              {% elif (key != '_id') and not (key.endswith('url')) and not (key.endswith('img')) %}
 	              <tr>
 	                <th scope="row">{{ key }}</th>
 	                <td>{{ value }}</td>

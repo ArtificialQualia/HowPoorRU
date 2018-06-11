@@ -362,18 +362,10 @@ def search():
         one_result.append(bolded_name)
         one_result.append(result['type'])
         one_result.append(url_for('.'+result['type'], entity_id=result['id']))
-        if result['type'] == 'character':
-            one_result.append('https://image.eveonline.com/Character/' + str(result['id']) + '_32.jpg')
-        elif result['type'] == 'ship':
-            one_result.append('https://image.eveonline.com/Render/' + str(result['id']) + '_32.png')
-        elif result['type'] == 'item':
-            one_result.append('https://image.eveonline.com/Type/' + str(result['id']) + '_32.png')
-        elif result['type'] == 'station':
-            one_result.append('https://image.eveonline.com/Render/' + str(result['type_id']) + '_32.png')
-        elif result['type'] == 'system' or result['type'] == 'constellation' or result['type'] == 'region':
+        if result['type'] == 'system' or result['type'] == 'constellation' or result['type'] == 'region':
             one_result.append(url_for('static', filename='img/' + result['type'] + '.png'))
         else:
-            one_result.append('https://image.eveonline.com/' + result['type'] + '/' + str(result['id']) + '_32.png')
+            one_result.append(make_img_url(result['type'], result['id']))
         limited_results.append(one_result)
     return jsonify(limited_results)
 
@@ -418,7 +410,27 @@ def conditional_decode(entry, id_prefix):
         if result is not None:
             entry[id_prefix + 'name'] = result['name']
             entry[id_prefix + 'url'] = url_for('.' + result['type'], entity_id=result['id'])
+            if 'type_id' in result:
+                entry[id_prefix + 'img'] = make_img_url(result['type'], result['type_id'])
+            else:
+                entry[id_prefix + 'img'] = make_img_url(result['type'], result['id'])
+            if entry[id_prefix + 'img'] == None:
+                del entry[id_prefix + 'img']
             
+def make_img_url(entry_type, entry_id):
+    if entry_type == 'character':
+        return 'https://image.eveonline.com/Character/' + str(entry_id) + '_32.jpg'
+    elif entry_type == 'ship':
+        return 'https://image.eveonline.com/Render/' + str(entry_id) + '_32.png'
+    elif entry_type == 'item':
+        return 'https://image.eveonline.com/Type/' + str(entry_id) + '_32.png'
+    elif entry_type == 'station':
+        return 'https://image.eveonline.com/Render/' + str(entry_id) + '_32.png'
+    elif entry_type == 'alliance' or entry_type == 'corporation':
+        return 'https://image.eveonline.com/' + entry_type + '/' + str(entry_id) + '_32.png'
+    else:
+        return None
+
 def context_decode(entry):
     if 'context_id' in entry:
         if isinstance(entry['context_id'], (list,)):
@@ -446,7 +458,8 @@ def make_entity_filter(entity_filter, tx_type):
         journal_search = {'$or':[ 
             {'first_party_id': entity_filter},
             {'second_party_id': entity_filter},
-            {'corp_id': entity_filter},
+            {'first_party_corp_id': entity_filter},
+            {'second_party_corp_id': entity_filter},
             {'tax_receiver_id': entity_filter},
             {'context_id': entity_filter}
         ]}
@@ -454,20 +467,23 @@ def make_entity_filter(entity_filter, tx_type):
         journal_search = {'$or':[ 
             {'$and': [{'first_party_id': entity_filter}, {'first_party_amount': {'$gt': 0}}]},
             {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$gt': 0}}]},
-            {'$and': [{'corp_id': entity_filter}, {'corp_amount': {'$gt': 0}}]},
+            {'$and': [{'first_party_corp_id': entity_filter}, {'first_party_amount': {'$gt': 0}}]},
+            {'$and': [{'second_party_corp_id': entity_filter}, {'second_party_amount': {'$gt': 0}}]},
             {'tax_receiver_id': entity_filter}
         ]}
     elif tx_type == 'losses':
         journal_search = {'$or':[ 
             {'$and': [{'first_party_id': entity_filter}, {'first_party_amount': {'$lt': 0}}]},
             {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$lt': 0}}]},
-            {'$and': [{'corp_id': entity_filter}, {'corp_amount': {'$lt': 0}}]},
+            {'$and': [{'first_party_corp_id': entity_filter}, {'first_party_amount': {'$lt': 0}}]},
+            {'$and': [{'second_party_corp_id': entity_filter}, {'second_party_amount': {'$lt': 0}}]},
         ]}
     elif tx_type == 'neutral':
         journal_search = {'$or':[ 
             {'$and': [{'first_party_id': entity_filter}, {'first_party_amount': {'$eq': 0}}]},
             {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$eq': 0}}]},
-            {'$and': [{'corp_id': entity_filter}, {'corp_amount': {'$eq': 0}}]},
+            {'$and': [{'first_party_corp_id': entity_filter}, {'first_party_amount': {'$eq': 0}}]},
+            {'$and': [{'second_party_corp_id': entity_filter}, {'second_party_amount': {'$eq': 0}}]},
             {'context_id': entity_filter}
         ]}
     return journal_search
@@ -477,5 +493,6 @@ def process_common_fields(entry):
     conditional_decode(entry, 'tax_receiver_')
     conditional_decode(entry, 'first_party_')
     conditional_decode(entry, 'second_party_')
-    conditional_decode(entry, 'corp_')
+    conditional_decode(entry, 'first_party_corp_')
+    conditional_decode(entry, 'second_party_corp_')
     context_decode(entry)

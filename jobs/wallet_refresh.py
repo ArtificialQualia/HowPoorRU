@@ -234,18 +234,29 @@ def process_journal(page, entity_doc, division=None):
                 if division:
                     journal_entry['tax_receiver_wallet_division'] = division
             else:
-                logger.info('Dont know what to do with: ' + str(journal_entry))
+                logger.info('Journal entry doesnt match any provided entity fields: ' + str(journal_entry))
                 logger.info('This may be a corp transaction that doesnt have the corp listed')
                 logger.info('Entity with error: ' + str(entity_doc['id']))
-                journal_entry['corp_amount'] = journal_entry.pop('amount')
-                journal_entry['second_party_amount'] = abs(journal_entry['corp_amount'])
-                journal_entry['first_party_amount'] = journal_entry['second_party_amount'] * -1
-                journal_entry['corp_id'] = entity_doc['id']
-                journal_entry['corp_balance'] = journal_entry.pop('balance')
-                if division:
-                    journal_entry['corp_wallet_division'] = division
+                if journal_entry['amount'] < 0:
+                    journal_entry['second_party_amount'] = abs(journal_entry.pop('amount'))
+                    journal_entry['first_party_amount'] = journal_entry['second_party_amount'] * -1
+                    journal_entry['first_party_corp_balance'] = journal_entry.pop('balance')
+                    journal_entry['first_party_corp_id'] = entity_doc['id']
+                    if division:
+                        journal_entry['first_party_corp_wallet_division'] = division
+                    else:
+                        logger.error(str(journal_entry['id']) + ' is not a corp transaction!  This is bad data!')
+                elif journal_entry['amount'] > 0:
+                    journal_entry['second_party_amount'] = abs(journal_entry.pop('amount'))
+                    journal_entry['first_party_amount'] = journal_entry['second_party_amount'] * -1
+                    journal_entry['second_party_corp_balance'] = journal_entry.pop('balance')
+                    journal_entry['second_party_corp_id'] = entity_doc['id']
+                    if division:
+                        journal_entry['second_party_corp_wallet_division'] = division
+                    else:
+                        logger.error(str(journal_entry['id']) + ' is not a corp transaction!  This is bad data!')
                 else:
-                    logger.error(str(journal_entry) + ' is not a corp transaction!  This is bad data!')
+                    logger.error('Corp amount is 0!  Cant assign the corp to a party, this will lead to bad data.')
             decode_journal_entry(journal_entry, entity_doc, division)
             new_journal_entries.append(journal_entry)
         else:
