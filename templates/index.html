@@ -101,11 +101,18 @@
 	                  <a href='{{ top_tx.second_party_url }}' class="orange-link">{{ value }}</a>
 	                </td>
 	              </tr>
-	              {% elif key == 'corp_name' %}
+	              {% elif key == 'first_party_corp_name' %}
 	              <tr>
 	                <th scope="row">{{ key }}</th>
 	                <td>
-	                  <a href='{{ top_tx.corp_url }}' class="orange-link">{{ value }}</a>
+	                  <a href='{{ entry.first_party_corp_url }}' class="orange-link">{{ value }}</a>
+	                </td>
+	              </tr>
+	              {% elif key == 'second_party_corp_name' %}
+	              <tr>
+	                <th scope="row">{{ key }}</th>
+	                <td>
+	                  <a href='{{ entry.second_party_corp_url }}' class="orange-link">{{ value }}</a>
 	                </td>
 	              </tr>
 	              {% elif key == 'tax_receiver_name' %}
@@ -115,13 +122,19 @@
 	                  <a href='{{ top_tx.tax_receiver_url }}' class="orange-link">{{ value }}</a>
 	                </td>
 	              </tr>
-	             {% elif key == 'context_name' %}
-	             <tr>
-	                 <th scope="row">{{ key }}</th>
-	               <td>
-	                 <a href='{{ top_tx.context_url }}' class="orange-link">{{ value }}</a>
-	               </td>
-	             </tr>
+	             {% elif key == 'context' %}
+	               {% for context in value %}
+	               <tr>
+	                 <th scope="row">context_{{ context.type }}</th>
+	                 <td>
+	                 {% if context.name is defined %}
+	                   <a href='{{ context.url }}' class="orange-link">{{ context.name }}</a>
+	                 {% else %}
+	                   {{ context.id }}
+	                 {% endif %}
+	                 </td>
+	               </tr>
+	               {% endfor %}
 	            {% elif key == 'location_name' %}
 	             <tr>
 	                 <th scope="row">{{ key }}</th>

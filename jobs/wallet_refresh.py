@@ -1,3 +1,5 @@
+from pymongo import ReturnDocument
+
 from jobs import shared
 from jobs.shared import logger
 from app.flask_shared_modules import rq
@@ -242,6 +244,7 @@ def process_journal(page, entity_doc, division=None):
                     journal_entry['first_party_amount'] = journal_entry['second_party_amount'] * -1
                     journal_entry['first_party_corp_balance'] = journal_entry.pop('balance')
                     journal_entry['first_party_corp_id'] = entity_doc['id']
+                    journal_entry['first_party_corp_name'] = entity_doc['name']
                     if division:
                         journal_entry['first_party_corp_wallet_division'] = division
                     else:
@@ -251,6 +254,7 @@ def process_journal(page, entity_doc, division=None):
                     journal_entry['first_party_amount'] = journal_entry['second_party_amount'] * -1
                     journal_entry['second_party_corp_balance'] = journal_entry.pop('balance')
                     journal_entry['second_party_corp_id'] = entity_doc['id']
+                    journal_entry['second_party_corp_name'] = entity_doc['name']
                     if division:
                         journal_entry['second_party_corp_wallet_division'] = division
                     else:
@@ -270,34 +274,72 @@ def process_journal(page, entity_doc, division=None):
 def decode_journal_entry(journal_entry, entity_doc, division):
     journal_entry['date'] = journal_entry['date'].v.replace(tzinfo=timezone.utc).timestamp()
     
-    shared.decode_party_id(journal_entry['first_party_id'])
-    shared.decode_party_id(journal_entry['second_party_id'])
+    result = shared.decode_party_id(journal_entry['first_party_id'])
+    if result:
+        journal_entry['first_party_name'] = result['name']
+        journal_entry['first_party_type'] = result['type']
+        
+    result = shared.decode_party_id(journal_entry['second_party_id'])
+    if result:
+        journal_entry['second_party_name'] = result['name']
+        journal_entry['second_party_type'] = result['type']
+        
     if 'tax_receiver_id' in journal_entry:
-        shared.decode_party_id(journal_entry['tax_receiver_id'])
+        result = shared.decode_party_id(journal_entry['tax_receiver_id'])
+        if result:
+            journal_entry['tax_receiver_name'] = result['name']
             
     if 'context_id' in journal_entry:
         decode_context_id(journal_entry, entity_doc, division)
     
 def decode_context_id(journal_entry, entity_doc, division):
+    journal_entry['context'] = [{}]
+    
     id_filter = {'id': journal_entry['context_id']}
     result = shared.db.entities.find_one(id_filter)
-    if result is not None:
-        return
-    
-    if journal_entry['context_id_type'] == 'character_id':
-        shared.user_update(journal_entry['context_id'])
+    if result:
+        journal_entry['context'][0]['id'] = result['id']
+        journal_entry['context'][0]['name'] = result['name']
+        journal_entry['context'][0]['type'] = result['type']
+    elif journal_entry['context_id_type'] == 'character_id':
+        result = shared.user_update(journal_entry['context_id'])
+        if result:
+            journal_entry['context'][0]['id'] = result['id']
+            journal_entry['context'][0]['name'] = result['name']
+            journal_entry['context'][0]['type'] = result['type']
     elif journal_entry['context_id_type'] == 'corporation_id':
-        shared.corp_update(journal_entry['context_id'])
+        result = shared.corp_update(journal_entry['context_id'])
+        if result:
+            journal_entry['context'][0]['id'] = result['id']
+            journal_entry['context'][0]['name'] = result['name']
+            journal_entry['context'][0]['type'] = result['type']
     elif journal_entry['context_id_type'] == 'system_id':
-        update_system(journal_entry['context_id'])
+        result = update_system(journal_entry['context_id'])
+        if result:
+            journal_entry['context'][0]['id'] = result['id']
+            journal_entry['context'][0]['name'] = result['name']
+            journal_entry['context'][0]['type'] = result['type']
     elif journal_entry['context_id_type'] == 'eve_system' or journal_entry['context_id_type'] == 'type_id':
-        update_item(journal_entry['context_id'], 'ship')
+        result = update_item(journal_entry['context_id'], 'ship')
+        if result:
+            journal_entry['context'][0]['id'] = result['id']
+            journal_entry['context'][0]['name'] = result['name']
+            journal_entry['context'][0]['type'] = result['type']
     elif journal_entry['context_id_type'] == 'market_transaction_id':
         update_market_transaction(journal_entry, entity_doc, division)
     elif journal_entry['context_id_type'] == 'station_id':
-        update_station(journal_entry['context_id'])
+        result = update_station(journal_entry['context_id'])
+        if result:
+            journal_entry['context'][0]['id'] = result['id']
+            journal_entry['context'][0]['name'] = result['name']
+            journal_entry['context'][0]['type'] = result['type']
+            journal_entry['context'][0]['type_id'] = result['type_id']
     else:
-        return
+        journal_entry['context'][0]['id'] = journal_entry['context_id']
+        journal_entry['context'][0]['type'] = journal_entry['context_id_type']
+        
+    del journal_entry['context_id']
+    del journal_entry['context_id_type']
     
 def update_market_transaction(journal_entry, entity_doc, division):
     #CCPls fix bug
@@ -322,23 +364,36 @@ def update_market_transaction(journal_entry, entity_doc, division):
     else:
         for transaction in public_data.data:
             if transaction['transaction_id'] == journal_entry['context_id']:
-                journal_entry['transaction_context_id'] = journal_entry['context_id']
-                journal_entry['transaction_context_type'] = journal_entry['context_id_type']
                 journal_entry['unit_price'] = transaction['unit_price']
                 journal_entry['quantity'] = transaction['quantity']
-                journal_entry['context_id_type'] = 'location_id type_id'
-                journal_entry['context_id'] = [transaction['location_id'], transaction['type_id']]
+                journal_entry['context'][0]['id'] = journal_entry['context_id']
+                journal_entry['context'][0]['type'] = journal_entry['context_id_type']
+                journal_entry['context'].append({})
+                journal_entry['context'][1]['id'] = transaction['location_id']
+                journal_entry['context'][1]['type'] = 'location_id'
+                journal_entry['context'].append({})
+                journal_entry['context'][2]['id'] = transaction['type_id']
+                journal_entry['context'][2]['type'] = 'item'
                 id_filter = {'id': transaction['type_id']}
                 result = shared.db.entities.find_one(id_filter)
                 if result is None:
-                    update_item(transaction['type_id'], 'item')
+                    result = update_item(transaction['type_id'], 'item')
+                    if result:
+                        journal_entry['context'][2]['name'] = result['name']
                 id_filter = {'id': transaction['location_id']}
                 result = shared.db.entities.find_one(id_filter)
                 if result is None:
-                    update_station(transaction['location_id'])
+                    result = update_station(transaction['location_id'])
+                    if result:
+                        journal_entry['context'][1]['name'] = result['name']
+                        journal_entry['context'][1]['type'] = result['type']
+                        journal_entry['context'][1]['type_id'] = result['type_id']
                 if journal_entry['ref_type'] == 'market_escrow' and journal_entry['first_party_id'] == journal_entry['second_party_id']:
                     journal_entry['second_party_id'] = transaction['client_id']
-                    shared.decode_party_id(journal_entry['second_party_id'])
+                    result = shared.decode_party_id(journal_entry['second_party_id'])
+                    if result:
+                        journal_entry['second_party_name'] = result['name']
+                        journal_entry['second_party_type'] = result['type']
                 return
             elif transaction['transaction_id'] < journal_entry['context_id']:
                 break
@@ -379,7 +434,7 @@ def update_station(station_id):
     
     data_to_update_id = {'id': data_to_update['id']}
     update = {"$set": data_to_update}
-    shared.db.entities.update_one(data_to_update_id, update, upsert=True)
+    return shared.db.entities.find_one_and_update(data_to_update_id, update, upsert=True, return_document=ReturnDocument.AFTER)
     
 
 def update_system(system_id):
@@ -417,7 +472,7 @@ def update_system(system_id):
     
     data_to_update_id = {'id': data_to_update['id']}
     update = {"$set": data_to_update}
-    shared.db.entities.update_one(data_to_update_id, update, upsert=True)
+    return shared.db.entities.find_one_and_update(data_to_update_id, update, upsert=True, return_document=ReturnDocument.AFTER)
 
 def update_constellation(constellation_id):
     data_to_update = {}
@@ -515,4 +570,4 @@ def update_item(item_id, item_type):
         
     data_to_update_id = {'id': data_to_update['id']}
     update = {"$set": data_to_update}
-    shared.db.entities.update_one(data_to_update_id, update, upsert=True)
+    return shared.db.entities.find_one_and_update(data_to_update_id, update, upsert=True, return_document=ReturnDocument.AFTER)

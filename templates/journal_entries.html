@@ -156,50 +156,44 @@
         {% endif %}
 		    {% if entry.first_party_name is defined and entry.first_party_corp_name is defined %}
 		    <td>
-		      <a href='{{ entry.first_party_url }}' class="orange-link d-inline"><img src="{{ entry.first_party_img }}">{{ entry.first_party_name }}</a>,
-		      <a href='{{ entry.first_party_corp_url }}' class="orange-link d-inline"><img src="{{ entry.first_party_corp_img }}">{{ entry.first_party_corp_name }}</a>
+		      <a href='{{ entry.first_party_url }}' class="orange-link"><img src="{{ entry.first_party_img }}">{{ entry.first_party_name }}</a>
+		      on behalf of
+		      <a href='{{ entry.first_party_corp_url }}' class="orange-link"><img src="{{ entry.first_party_corp_img }}">{{ entry.first_party_corp_name }}</a>
 		    </td>
         {% elif entry.first_party_name is defined %}
         <td>
-          <a href='{{ entry.first_party_url }}' class="orange-link d-inline"><img src="{{ entry.first_party_img }}">{{ entry.first_party_name }}</a>
+          <a href='{{ entry.first_party_url }}' class="orange-link"><img src="{{ entry.first_party_img }}">{{ entry.first_party_name }}</a>
         </td>
 		    {% else %}
 		    <td>{{ entry.first_party_id }}</td>
 		    {% endif %}
 		    {% if entry.second_party_name is defined and entry.second_party_corp_name is defined %}
 		    <td>
-		      <a href='{{ entry.second_party_url }}' class="orange-link d-inline"><img src="{{ entry.second_party_img }}">{{ entry.second_party_name }}</a>,
-          <a href='{{ entry.second_party_corp_url }}' class="orange-link d-inline"><img src="{{ entry.second_party_corp_img }}">{{ entry.second_party_corp_name }}</a>
+		      <a href='{{ entry.second_party_url }}' class="orange-link"><img src="{{ entry.second_party_img }}">{{ entry.second_party_name }}</a>
+          on behalf of
+          <a href='{{ entry.second_party_corp_url }}' class="orange-link"><img src="{{ entry.second_party_corp_img }}">{{ entry.second_party_corp_name }}</a>
 		    </td>
         {% elif entry.second_party_name is defined %}
         <td>
-          <a href='{{ entry.second_party_url }}' class="orange-link d-inline"><img src="{{ entry.second_party_img }}">{{ entry.second_party_name }}</a>
+          <a href='{{ entry.second_party_url }}' class="orange-link"><img src="{{ entry.second_party_img }}">{{ entry.second_party_name }}</a>
         </td>
 		    {% else %}
 		    <td>{{ entry.second_party_id }}</td>
 		    {% endif %}
 	      {% if entity_data is defined %}
-	        {% if entry.context_name is defined and entry.context_img is defined %}
-	          <td>
-              <a href='{{ entry.context_url }}' class="orange-link"><img src="{{ entry.context_img }}">{{ entry.context_name }}</a>
-            </td>
-          {% elif entry.context_name is defined %}
-            <td>
-              <a href='{{ entry.context_url }}' class="orange-link">{{ entry.context_name }}</a>
-            </td>
-          {% elif entry.context_id_type == 'location_id type_id' and entry.location_name is defined and entry.type_name is defined %}
-            <td>
-              <a href='{{ entry.location_url }}' class="orange-link d-inline"><img src="{{ entry.location_img }}">{{ entry.location_name }}</a>, 
-              <a href='{{ entry.type_url }}' class="orange-link d-inline"><img src="{{ entry.type_img }}">{{ entry.type_name }}</a>
-            </td>
-          {% elif entry.context_id_type == 'location_id type_id' and entry.type_name is defined %}
-            <td>
-              {{ entry.location_id }}, 
-              <a href='{{ entry.type_url }}' class="orange-link d-inline"><img src="{{ entry.type_img }}">{{ entry.type_name }}</a>
-            </td>
-          {% else %}
-			      <td>{{ entry.context_id }}</td>
-			    {% endif %}
+          <td>
+	        {% if entry.context is defined %}
+	          {% for context in entry.context %}
+	            {% if context.type != 'market_transaction_id' %}
+		            {% if context.name is defined %}
+			            <a href='{{ context.url }}' class="orange-link"><img src="{{ context.img }}">{{ context.name }}</a>
+			          {% else %}
+	                {{ context.id }}
+	              {% endif %}
+	            {% endif %}
+            {% endfor %}
+          {% endif %}
+          </td>
 			    {% if entry.tax is defined %}
 			      {% if entry.tax < 0 %}
 				    <td class='negative-isk'>
@@ -265,11 +259,18 @@
                   <a href='{{ entry.second_party_url }}' class="orange-link">{{ value }}</a>
                 </td>
               </tr>
-              {% elif key == 'corp_name' %}
+              {% elif key == 'first_party_corp_name' %}
               <tr>
                 <th scope="row">{{ key }}</th>
                 <td>
-                  <a href='{{ entry.corp_url }}' class="orange-link">{{ value }}</a>
+                  <a href='{{ entry.first_party_corp_url }}' class="orange-link">{{ value }}</a>
+                </td>
+              </tr>
+              {% elif key == 'second_party_corp_name' %}
+              <tr>
+                <th scope="row">{{ key }}</th>
+                <td>
+                  <a href='{{ entry.second_party_corp_url }}' class="orange-link">{{ value }}</a>
                 </td>
               </tr>
               {% elif key == 'tax_receiver_name' %}
@@ -279,13 +280,19 @@
                   <a href='{{ tax_receiver_url }}' class="orange-link">{{ value }}</a>
                 </td>
               </tr>
-		         {% elif key == 'context_name' %}
-             <tr>
-                 <th scope="row">{{ key }}</th>
-		           <td>
-		             <a href='{{ entry.context_url }}' class="orange-link">{{ entry.context_name }}</a>
-		           </td>
-		         </tr>
+		         {% elif key == 'context' %}
+		           {% for context in value %}
+               <tr>
+                 <th scope="row">context_{{ context.type }}</th>
+	               <td>
+                 {% if context.name is defined %}
+                   <a href='{{ context.url }}' class="orange-link">{{ context.name }}</a>
+                 {% else %}
+                   {{ context.id }}
+                 {% endif %}
+                 </td>
+               </tr>
+	             {% endfor %}
 	          {% elif key == 'location_name' %}
              <tr>
                  <th scope="row">{{ key }}</th>

@@ -322,7 +322,7 @@ def context_id_routes(entity_id, context_type, page_number, entity_group_data=No
     conditional_decode(entity_data, 'system_')
     
     # find all journal entries that this entity's corps are involved in
-    journal_search = {'context_id': entity_id}
+    journal_search = {'context.id': entity_id}
     journal_cursor = mongo.db.journals.find(journal_search)
     
     # calculate number of entries to skip in database
@@ -399,9 +399,6 @@ def page_range_check(page_number):
 def conditional_decode(entry, id_prefix):
     """ helper to decode entity database ids to names and urls """
     if (id_prefix + 'id') in entry:
-        if entry[id_prefix + 'id'] == 1:
-            entry[id_prefix + 'id'] = 'Character'
-            return
         if entry[id_prefix + 'id'] == 2:
             entry[id_prefix + 'id'] = 'Corporation'
             return
@@ -410,12 +407,6 @@ def conditional_decode(entry, id_prefix):
         if result is not None:
             entry[id_prefix + 'name'] = result['name']
             entry[id_prefix + 'url'] = url_for('.' + result['type'], entity_id=result['id'])
-            if 'type_id' in result:
-                entry[id_prefix + 'img'] = make_img_url(result['type'], result['type_id'])
-            else:
-                entry[id_prefix + 'img'] = make_img_url(result['type'], result['id'])
-            if entry[id_prefix + 'img'] == None:
-                del entry[id_prefix + 'img']
             
 def make_img_url(entry_type, entry_id):
     if entry_type == 'character':
@@ -432,14 +423,14 @@ def make_img_url(entry_type, entry_id):
         return None
 
 def context_decode(entry):
-    if 'context_id' in entry:
-        if isinstance(entry['context_id'], (list,)):
-            entry['location_id'] = entry['context_id'][0]
-            entry['type_id'] = entry['context_id'][1]
-            conditional_decode(entry, 'location_')
-            conditional_decode(entry, 'type_')
-        else:
-            conditional_decode(entry, 'context_')
+    if 'context' in entry:
+        for context_entry in entry['context']:
+            if 'name' in context_entry:
+                if 'type_id' in context_entry:
+                    context_entry['img'] = make_img_url(context_entry['type'], context_entry['type_id'])
+                else:
+                    context_entry['img'] = make_img_url(context_entry['type'], context_entry['id'])
+                context_entry['url'] = url_for('.' + context_entry['type'], entity_id=context_entry['id'])
 
 def redis_bytes_to_data(redis_object):
     decoded_object = {}
@@ -490,9 +481,22 @@ def make_entity_filter(entity_filter, tx_type):
 
 def process_common_fields(entry):
     entry['date'] = datetime.fromtimestamp(entry['date'], timezone.utc).strftime("%Y-%m-%d %X")
-    conditional_decode(entry, 'tax_receiver_')
-    conditional_decode(entry, 'first_party_')
-    conditional_decode(entry, 'second_party_')
-    conditional_decode(entry, 'first_party_corp_')
-    conditional_decode(entry, 'second_party_corp_')
+    party_decode(entry, 'tax_receiver_')
+    party_decode(entry, 'first_party_')
+    party_decode(entry, 'second_party_')
+    party_decode(entry, 'first_party_corp_')
+    party_decode(entry, 'second_party_corp_')
     context_decode(entry)
+    
+def party_decode(entry, id_prefix):
+    """ helper to decode entity database ids to special names and images """
+    if (id_prefix + 'id') in entry:
+        if entry[id_prefix + 'id'] == 2:
+            entry[id_prefix + 'id'] = 'Corporation'
+        elif (id_prefix + 'name') in entry:
+            if (id_prefix + 'type') in entry:
+                entry[id_prefix + 'img'] = make_img_url(entry[id_prefix + 'type'], entry[id_prefix + 'id'])
+                entry[id_prefix + 'url'] = url_for('.' + entry[id_prefix + 'type'], entity_id=entry[id_prefix + 'id'])
+            else:
+                entry[id_prefix + 'img'] = make_img_url('corporation', entry[id_prefix + 'id'])
+                entry[id_prefix + 'url'] = url_for('.corporation', entity_id=entry[id_prefix + 'id'])

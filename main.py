@@ -31,12 +31,6 @@ mongo.init_app(app)
 login_manager.init_app(app)
 
 rq.init_app(app)
-#rq.init_cli(app)
-
-#rq_workers = []
-#for x in range(config.RQ_WORKER_COUNT):
-#    new_worker = cli.worker()
-#    rq_workers.append(new_worker)
 
 for job in rq.get_scheduler().get_jobs():
     rq.get_scheduler().cancel(job)
@@ -49,30 +43,37 @@ public_info_refresh.update_all_public_info.schedule(datetime.utcnow(), job_id="u
 
 # create indexes in database, runs on every startup to prevent manual db setup
 # and ensure compliance
+def ensure_db_indexes():
+    with app.app_context():
+        mongo.db.entities.create_index('id', unique=True)
+        mongo.db.journals.create_index([('id', pymongo.DESCENDING)], unique=True)
+        mongo.db.journals.create_index([('first_party_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True)
+        mongo.db.journals.create_index([('second_party_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True)
+        mongo.db.journals.create_index([('tax_receiver_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
+                                       partialFilterExpression={ 'tax_receiver_id': { '$exists': True } })
+        mongo.db.journals.create_index([('context.id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
+                                       partialFilterExpression={ 'context.id': { '$exists': True } })
+        mongo.db.journals.create_index([('first_party_corp_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
+                                       partialFilterExpression={ 'first_party_corp_id': { '$exists': True } })
+        mongo.db.journals.create_index([('second_party_corp_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
+                                       partialFilterExpression={ 'second_party_corp_id': { '$exists': True } })
 try:
     from uwsgidecorators import postfork
     @postfork
-    def ensure_db_indexs():
-        with app.app_context():
-            mongo.db.entities.create_index('id', unique=True)
-            mongo.db.journals.create_index([('id', pymongo.DESCENDING)], unique=True)
-            mongo.db.journals.create_index([('first_party_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True)
-            mongo.db.journals.create_index([('second_party_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True)
-            mongo.db.journals.create_index([('tax_receiver_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
-                                           partialFilterExpression={ 'tax_receiver_id': { '$exists': True } })
-            mongo.db.journals.create_index([('context_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
-                                           partialFilterExpression={ 'context_id': { '$exists': True } })
-            mongo.db.journals.create_index([('first_party_corp_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
-                                           partialFilterExpression={ 'first_party_corp_id': { '$exists': True } })
-            mongo.db.journals.create_index([('second_party_corp_id', pymongo.ASCENDING), ('id', pymongo.DESCENDING)], unique=True,
-                                           partialFilterExpression={ 'second_party_corp_id': { '$exists': True } })
+    def postfork_ensure_db_indexes():
+        ensure_db_indexes()
 except ImportError as e:
-    print('can\'t import uwsgidecorators, if this is a dev environment, please run DB setup manually')
+    ensure_db_indexes()
 
 app.register_blueprint(sso_pages)
 app.register_blueprint(main_pages)
 
 # End Globals
+
+#profiler code for testing
+#from werkzeug.contrib.profiler import ProfilerMiddleware
+#app.config['PROFILE'] = True
+#app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[20])
 
 if __name__ == '__main__':
     app.run(port=config.PORT, host=config.HOST)
