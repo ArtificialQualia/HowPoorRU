@@ -1,3 +1,8 @@
+"""
+ contains job that updates statistics that get placed in the Redis cache for later consumption
+ many statistics contain 'long' running or complicated queries that may require a full db scan
+"""
+
 from jobs import shared
 from jobs.shared import logger
 

@@ -1,3 +1,8 @@
+"""
+ contains some shared modules and functions that are used by multiple jobs
+ no jobs are run from here, but all jobs import this file
+"""
+
 from pymongo import MongoClient
 from pymongo import ReturnDocument
 
@@ -5,13 +10,12 @@ from app.flask_shared_modules import esiapp
 from app.flask_shared_modules import esiclient
 from app.flask_shared_modules import esisecurity
 
-import redis
-
 import config
 
 import logging
 from datetime import timezone
 
+# setup the logger that is used by all jobs
 logger = logging.getLogger('jobs_logger')
 logger.setLevel(config.JOB_LOG_LEVEL)
 ch = logging.StreamHandler()
@@ -20,13 +24,16 @@ formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s - %(message)s'
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+# setup DB connector manually, as the connector used by routes is only set up after flask is, so it can't be shared
 db = MongoClient(config.MONGO_HOST, config.MONGO_PORT, connect=config.MONGO_CONNECT)[config.MONGO_DBNAME]
 
+# convenience references for jobs
 esiapp = esiapp
 esisecurity = esisecurity
 esiclient = esiclient
 
 def user_update(character_id, public_data=None):
+    """ adds or updates a DB entry for a user (character) and returns it """
     data_to_update = {}
     data_to_update['id'] = character_id
     data_to_update['type'] = 'character'
@@ -60,6 +67,7 @@ def user_update(character_id, public_data=None):
     return new_user_doc
         
 def corp_update(corporation_id, public_data=None):
+    """ adds or updates a DB entry for a corporation and returns it """
     data_to_update = {}
     data_to_update['id'] = corporation_id
     data_to_update['type'] = 'corporation'
@@ -98,6 +106,7 @@ def corp_update(corporation_id, public_data=None):
     return new_corp_doc
         
 def alliance_update(alliance_id, public_data=None):
+    """ adds or updates a DB entry for an alliance and returns it """
     data_to_update = {}
     data_to_update['id'] = alliance_id
     data_to_update['type'] = 'alliance'
@@ -139,6 +148,7 @@ def alliance_update(alliance_id, public_data=None):
 
 
 def decode_party_id(party_id):
+    """ function to handle 'unknown' party_ids.  The search endpoint could also be used but there are only a few party types """
     id_filter = {'id': party_id}
     result = db.entities.find_one(id_filter)
     if result is not None:
@@ -161,4 +171,5 @@ def decode_party_id(party_id):
     result = esiclient.request(op)
     if result.status == 200:
         return alliance_update(party_id, result)
+    # sometimes the party_id is a '''''''special''''''' value, so most of the time this is no big deal (but could mean error)
     logger.info('No character/corp/alliance found for: ' + str(party_id))

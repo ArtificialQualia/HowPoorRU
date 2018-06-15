@@ -1,3 +1,7 @@
+"""
+ Flask blueprint to handle logins/logouts and related for EVE SSO
+"""
+
 from esipy.exceptions import APIException
 
 from flask import request

@@ -1,3 +1,8 @@
+"""
+ Primary routes file
+ Contains all the important routes for the application, along with some helper functions
+"""
+
 import pymongo
 import bson
 
@@ -25,7 +30,7 @@ main_pages = Blueprint('main_pages', __name__)
 @main_pages.route('/')
 @main_pages.route('/<int:page_number>')
 def index(page_number=1, *args):
-    """ paginated main index page, contains latest journal entries """
+    """ paginated main index page, contains latest journal entries and 'top' statistics """
     # ensure page is in valid range
     page_range_check(page_number)
     
@@ -54,6 +59,7 @@ def index(page_number=1, *args):
         
         journal_entries.append(sorted_entry)
         
+    # for the index page, the cached 'top' statistics are retrieved and decoded from redis
     top_character_bytes = r.hgetall('top_character_wallet')
     top_character = redis_bytes_to_data(top_character_bytes)
     top_character['url'] = url_for('.character', entity_id=top_character.get('id') or 0)
@@ -228,9 +234,18 @@ def alliance(entity_id, page_number=1, tx_type='all'):
         
     return render_template('alliance.html', entity_data=alliance_data, journal_entries=journal_entries, page_number=page_number)
 
+@main_pages.route('/faq')
+def faq():
+    return render_template('faq.html')
+
+####################
+# Routes for 'context' pages
+# they all use context_id_routes() to do most of the work
+####################
 @main_pages.route('/system/<int:entity_id>')
 @main_pages.route('/system/<int:entity_id>/<int:page_number>')
 def system(entity_id, page_number=1):
+    """ page for systems, the stations in the system must be retrieved so those transactions are also displayed """
     id_filter = {'id': entity_id}
     entity_data = mongo.db.entities.find_one_or_404(id_filter)
     if entity_data['type'] != 'system':
@@ -243,6 +258,7 @@ def system(entity_id, page_number=1):
 @main_pages.route('/constellation/<int:entity_id>')
 @main_pages.route('/constellation/<int:entity_id>/<int:page_number>')
 def constellation(entity_id, page_number=1):
+    """ page for constellations, the systems and the stations in those system must be retrieved so those transactions are also displayed """
     id_filter = {'id': entity_id}
     entity_data = mongo.db.entities.find_one_or_404(id_filter)
     if entity_data['type'] != 'constellation':
@@ -259,6 +275,7 @@ def constellation(entity_id, page_number=1):
 @main_pages.route('/region/<int:entity_id>')
 @main_pages.route('/region/<int:entity_id>/<int:page_number>')
 def region(entity_id, page_number=1):
+    """ page for regions, the constellations, systems, and the stations in those system must be retrieved so those transactions are also displayed """
     id_filter = {'id': entity_id}
     entity_data = mongo.db.entities.find_one_or_404(id_filter)
     if entity_data['type'] != 'region':
@@ -295,17 +312,20 @@ def station(entity_id, page_number=1):
 @main_pages.route('/group/<int:entity_id>')
 @main_pages.route('/group/<int:entity_id>/<int:page_number>')
 def group(entity_id, page_number=1):
+    """ page for item groups, the items that are in said group must be retrieved so those transactions are also displayed """
     id_filter = {'id': entity_id}
     entity_data = mongo.db.entities.find_one_or_404(id_filter)
     if entity_data['type'] != 'group':
         abort(404)
     return context_id_routes({ '$in': entity_data['types'] }, 'group', page_number, entity_data)
 
-@main_pages.route('/faq')
-def faq():
-    return render_template('faq.html')
-
 def context_id_routes(entity_id, context_type, page_number, entity_group_data=None):
+    """
+    does most of the work to create the context pages.
+    If the entity data has already been retrieved because this context has children,
+    entity_group_data is set so we don't have to hit the DB again
+    this also means that entity_id will actually be an $in query, not really an ID
+    """
     # ensure page is in valid range
     page_range_check(page_number)
     
@@ -345,15 +365,30 @@ def context_id_routes(entity_id, context_type, page_number, entity_group_data=No
         
     return render_template(str(context_type) + '.html', entity_data=entity_data, journal_entries=journal_entries, page_number=page_number)
 
+# End context routes
+
 @main_pages.route('/search', methods=['POST'])
 def search():
+    """
+    handler for search operations
+    NOTE: this type of search is BAD for performance, but it should be ok for now
+    eventually alternative options will have to be explored (like ElasticSearch)
+    """
+    # search_string should always be present if a user properly performed a search from the searchbar
     if 'search_string' not in request.form:
         abort(400)
+        
+    # the string the user is searching for must be sanitized so special regex characters aren't misinterpreted
     sanitized_string = '^(.*?)(' + re.escape(request.form['search_string']) + ')(.*)'
     python_regex = re.compile(sanitized_string, re.IGNORECASE)
     bson_regex = bson.regex.Regex.from_native(python_regex)
     regex_find = {'name': bson_regex}
+    
+    # here is where the actual search is performed, THIS REQUIRES A FULL DB SCAN
     results = mongo.db.entities.find(regex_find)
+    
+    # only the first 10 results are returned to prevent overwhelming the end user
+    # a result has the format of [id, html formatted name with bolded matched text, type, image_url]
     limited_results = []
     for result in results.limit(10):
         one_result = [result['id']]
@@ -367,15 +402,18 @@ def search():
         else:
             one_result.append(make_img_url(result['type'], result['id']))
         limited_results.append(one_result)
+    # return results to searchbar, the rest is handled by javascript
     return jsonify(limited_results)
 
 @main_pages.route('/account')
 @login_required
 def account():
+    """ account management page, includes ESI scopes management.  Removes specified scopes when a query string is passed. """
     character_filter = {'id': current_user.character_id}
     character_data = mongo.db.entities.find_one_or_404(character_filter)
     scopes_list = character_data['scopes'].split()
     
+    # if a proper query string was passed, remove the named scope from the user's DB entry
     remove_scope = request.args.get('remove_scope')
     if remove_scope is not None:
         data_to_update = {}
@@ -397,7 +435,7 @@ def page_range_check(page_number):
         abort(404)
         
 def conditional_decode(entry, id_prefix):
-    """ helper to decode entity database ids to names and urls """
+    """ helper to decode normalized entity database ids to names and urls """
     if (id_prefix + 'id') in entry:
         if entry[id_prefix + 'id'] == 2:
             entry[id_prefix + 'id'] = 'Corporation'
@@ -409,6 +447,7 @@ def conditional_decode(entry, id_prefix):
             entry[id_prefix + 'url'] = url_for('.' + result['type'], entity_id=result['id'])
             
 def make_img_url(entry_type, entry_id):
+    """ helper to create image urls that come from the EVE images server """
     if entry_type == 'character':
         return 'https://image.eveonline.com/Character/' + str(entry_id) + '_32.jpg'
     elif entry_type == 'ship':
@@ -420,12 +459,14 @@ def make_img_url(entry_type, entry_id):
     elif entry_type == 'alliance' or entry_type == 'corporation':
         return 'https://image.eveonline.com/' + entry_type + '/' + str(entry_id) + '_32.png'
     else:
-        return None
+        return ''
 
 def context_decode(entry):
+    """ special helper for context entries to add img and page urls, able to handle all types of contexts """
     if 'context' in entry:
         for context_entry in entry['context']:
             if 'name' in context_entry:
+                # 'type_id' being in the context entry means this is a station, and therefore needs to use a different id for the image
                 if 'type_id' in context_entry:
                     context_entry['img'] = make_img_url(context_entry['type'], context_entry['type_id'])
                 else:
@@ -433,6 +474,7 @@ def context_decode(entry):
                 context_entry['url'] = url_for('.' + context_entry['type'], entity_id=context_entry['id'])
 
 def redis_bytes_to_data(redis_object):
+    """ helper function to turn the raw bytes returned from redis into their proper values """
     decoded_object = {}
     for key, value in redis_object.items():
         if key.decode('utf-8') == 'wallet' or key.decode('utf-8') == 'amount':
@@ -444,6 +486,11 @@ def redis_bytes_to_data(redis_object):
     return decoded_object
 
 def make_entity_filter(entity_filter, tx_type):
+    """
+    returns the actual query used for searching for journal entries
+    note that context.id is included here, as sometimes characters and others show up in context.id
+    for example when a bounty is received, but this means that entity didn't actually gain/lose isk
+    """
     journal_search = {}
     if tx_type == 'all':
         journal_search = {'$or':[ 
@@ -452,7 +499,7 @@ def make_entity_filter(entity_filter, tx_type):
             {'first_party_corp_id': entity_filter},
             {'second_party_corp_id': entity_filter},
             {'tax_receiver_id': entity_filter},
-            {'context_id': entity_filter}
+            {'context.id': entity_filter}
         ]}
     elif tx_type == 'gains':
         journal_search = {'$or':[ 
@@ -475,11 +522,12 @@ def make_entity_filter(entity_filter, tx_type):
             {'$and': [{'second_party_id': entity_filter}, {'second_party_amount': {'$eq': 0}}]},
             {'$and': [{'first_party_corp_id': entity_filter}, {'first_party_amount': {'$eq': 0}}]},
             {'$and': [{'second_party_corp_id': entity_filter}, {'second_party_amount': {'$eq': 0}}]},
-            {'context_id': entity_filter}
+            {'context.id': entity_filter}
         ]}
     return journal_search
 
 def process_common_fields(entry):
+    """ helper to process fields that are common across journal entries """
     entry['date'] = datetime.fromtimestamp(entry['date'], timezone.utc).strftime("%Y-%m-%d %X")
     party_decode(entry, 'tax_receiver_')
     party_decode(entry, 'first_party_')
@@ -489,7 +537,7 @@ def process_common_fields(entry):
     context_decode(entry)
     
 def party_decode(entry, id_prefix):
-    """ helper to decode entity database ids to special names and images """
+    """ helper to decode entity database ids to image and page urls"""
     if (id_prefix + 'id') in entry:
         if entry[id_prefix + 'id'] == 2:
             entry[id_prefix + 'id'] = 'Corporation'

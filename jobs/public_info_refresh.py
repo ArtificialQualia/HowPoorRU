@@ -1,3 +1,9 @@
+"""
+ updates all info on all entities that don't require ESI tokens to update
+ this can take a long time for a large DB, even though most info will remain the same
+ note that some entities that are 'static' don't get updated, like systems and items
+"""
+
 from jobs import shared
 from jobs.shared import logger
 

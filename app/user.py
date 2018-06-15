@@ -1,3 +1,6 @@
+"""
+ Class representing a user, most user information comes from EVE SSO's verify()
+"""
 from pymongo import ReturnDocument
 
 from flask_login.mixins import UserMixin

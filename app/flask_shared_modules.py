@@ -1,3 +1,8 @@
+"""
+ This file contains many of the objects that need to be shared between flask and background workers
+ Many of them are later initiated in main.py, but some like the ESI library is used as-is
+"""
+
 from esipy import App
 from esipy import EsiClient
 from esipy import EsiSecurity
@@ -36,8 +41,10 @@ esiclient = EsiClient(
     headers={'User-Agent': config.ESI_USER_AGENT}
 )
 
+# init RQ, result_ttl needs to be unset so that scheduled jobs will always continue to run
 rq = RQ()
 rq.default_result_ttl = None
 rq.default_timeout = config.DEFAULT_TIMEOUT
 
+# direct access to redis is needed for some components, like statistics caching
 r = redis.StrictRedis(host=config.REDIS_URL, port=config.REDIS_PORT, db=0)
