@@ -142,7 +142,7 @@ def decode_party_id(party_id):
     id_filter = {'id': party_id}
     result = db.entities.find_one(id_filter)
     if result is not None:
-        return result['name'], result['type']
+        return result
     op = esiapp.op['get_characters_character_id'](
         character_id=party_id
     )

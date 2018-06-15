@@ -36,10 +36,10 @@ for job in rq.get_scheduler().get_jobs():
     rq.get_scheduler().cancel(job)
     job.cancel()
 
-statistics.update_statistics.schedule(datetime.utcnow(), job_id="update_statistics", interval=62, ttl=61)
-wallet_refresh.process_character_wallets.schedule(datetime.utcnow(), job_id="process_character_wallets", interval=120, ttl=100)
-wallet_refresh.process_corp_wallets.schedule(datetime.utcnow(), job_id="process_corp_wallets", interval=300, ttl=240)
-public_info_refresh.update_all_public_info.schedule(datetime.utcnow(), job_id="update_all_public_info", interval=3600, ttl=600, timeout=7200)
+statistics.update_statistics.schedule(datetime.utcnow(), job_id="update_statistics", interval=62)
+wallet_refresh.process_character_wallets.schedule(datetime.utcnow(), job_id="process_character_wallets", interval=120)
+wallet_refresh.process_corp_wallets.schedule(datetime.utcnow(), job_id="process_corp_wallets", interval=300)
+public_info_refresh.update_all_public_info.schedule(datetime.utcnow(), job_id="update_all_public_info", interval=3600, timeout=7200)
 
 # create indexes in database, runs on every startup to prevent manual db setup
 # and ensure compliance

@@ -105,14 +105,14 @@
 	              <tr>
 	                <th scope="row">{{ key }}</th>
 	                <td>
-	                  <a href='{{ entry.first_party_corp_url }}' class="orange-link">{{ value }}</a>
+	                  <a href='{{ top_tx.first_party_corp_url }}' class="orange-link">{{ value }}</a>
 	                </td>
 	              </tr>
 	              {% elif key == 'second_party_corp_name' %}
 	              <tr>
 	                <th scope="row">{{ key }}</th>
 	                <td>
-	                  <a href='{{ entry.second_party_corp_url }}' class="orange-link">{{ value }}</a>
+	                  <a href='{{ top_tx.second_party_corp_url }}' class="orange-link">{{ value }}</a>
 	                </td>
 	              </tr>
 	              {% elif key == 'tax_receiver_name' %}

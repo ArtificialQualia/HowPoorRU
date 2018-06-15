@@ -40,22 +40,15 @@ def update_top_corp_wallet():
     aggregate_sort = { '$sort': {'max_wallet': -1} }
     aggregate_limit = { '$limit': 1 }
     top_wallet_cursor = shared.db.entities.aggregate([match_filter, max_wallet_projection, aggregate_sort, aggregate_limit])
-    if top_wallet_cursor is None:
-        return
     
-    for x in top_wallet_cursor:
-        top_wallet = x
-    r.hset('top_corp_wallet', 'name', top_wallet['name'])
-    r.hset('top_corp_wallet', 'id', top_wallet['id'])
-    r.hset('top_corp_wallet', 'wallet', top_wallet['max_wallet'])
+    for top_wallet in top_wallet_cursor:
+        r.hset('top_corp_wallet', 'name', top_wallet['name'])
+        r.hset('top_corp_wallet', 'id', top_wallet['id'])
+        r.hset('top_corp_wallet', 'wallet', top_wallet['max_wallet'])
     
 def update_top_transaction():
     one_day_ago = (datetime.now(timezone.utc) - timedelta(days=1)).timestamp()
     top_tx_cursor = shared.db.journals.find({'date': {'$gte': one_day_ago}}).sort([('second_party_amount', -1)]).limit(1)
-    if top_tx_cursor is None:
-        return
     
-    for x in top_tx_cursor:
-        top_tx = x
-    r.hset('top_tx_day', 'id', top_tx['id'])
-    
+    for top_tx in top_tx_cursor:
+        r.hset('top_tx_day', 'id', top_tx['id'])

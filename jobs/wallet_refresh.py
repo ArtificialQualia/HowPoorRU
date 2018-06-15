@@ -378,16 +378,16 @@ def update_market_transaction(journal_entry, entity_doc, division):
                 result = shared.db.entities.find_one(id_filter)
                 if result is None:
                     result = update_item(transaction['type_id'], 'item')
-                    if result:
-                        journal_entry['context'][2]['name'] = result['name']
+                if result:
+                    journal_entry['context'][2]['name'] = result['name']
                 id_filter = {'id': transaction['location_id']}
                 result = shared.db.entities.find_one(id_filter)
                 if result is None:
                     result = update_station(transaction['location_id'])
-                    if result:
-                        journal_entry['context'][1]['name'] = result['name']
-                        journal_entry['context'][1]['type'] = result['type']
-                        journal_entry['context'][1]['type_id'] = result['type_id']
+                if result:
+                    journal_entry['context'][1]['name'] = result['name']
+                    journal_entry['context'][1]['type'] = result['type']
+                    journal_entry['context'][1]['type_id'] = result['type_id']
                 if journal_entry['ref_type'] == 'market_escrow' and journal_entry['first_party_id'] == journal_entry['second_party_id']:
                     journal_entry['second_party_id'] = transaction['client_id']
                     result = shared.decode_party_id(journal_entry['second_party_id'])

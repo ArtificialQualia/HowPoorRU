@@ -58,7 +58,7 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for("index"))
+    return redirect(url_for("main_pages.index"))
 
 
 @sso_pages.route('/sso/callback')
@@ -100,7 +100,7 @@ def callback():
     session.permanent = True
 
     # send user to main index, maybe switch this to user page?
-    return redirect(url_for("index"))
+    return redirect(url_for("main_pages.index"))
 
 @login_manager.user_loader
 def load_user(character_id):
