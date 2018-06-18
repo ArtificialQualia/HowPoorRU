@@ -20,6 +20,9 @@ def decode_context_id(journal_entry, entity_doc, division):
         journal_entry['context'][0]['id'] = result['id']
         journal_entry['context'][0]['name'] = result['name']
         journal_entry['context'][0]['type'] = result['type']
+        # type_id is required for stations as their images don't use the regular id like other objects
+        if 'type_id' in result:
+            journal_entry['context'][0]['type_id'] = result['type_id']
     elif journal_entry['context_id_type'] == 'character_id':
         result = shared.user_update(journal_entry['context_id'])
         if result:
@@ -124,16 +127,23 @@ def update_market_transaction(journal_entry, entity_doc, division):
     # the journal entry is added to a special field so it can be processed on the next journal update
     logger.info('market transaction ID ' + str(journal_entry['context_id']) + ' not found in transaction data, probably bad cache timing.  Will try again later.')
     if division:
+        journal_entry['context'][0]['id'] = journal_entry['context_id']
+        journal_entry['context'][0]['type'] = journal_entry['context_id_type']
         missed_journal_ids = entity_doc.get('missed_market_transactions_' + str(division)) or []
         missed_journal_ids.append(journal_entry['id'])
         entity_doc['missed_market_transactions_' + str(division)] = missed_journal_ids
     else:
+        journal_entry['context'][0]['id'] = journal_entry['context_id']
+        journal_entry['context'][0]['type'] = journal_entry['context_id_type']
         missed_journal_ids = entity_doc.get('missed_market_transactions') or []
         missed_journal_ids.append(journal_entry['id'])
         entity_doc['missed_market_transactions'] = missed_journal_ids
     
 def update_station(station_id):
     """ adds a previously unknown station to the DB and returns it """
+    if station_id > 100000000:
+        logger.info('Station ID out of range: ' + str(station_id) + ', it is probably a citadel.')
+        return
     data_to_update = {}
     data_to_update['id'] = station_id
     data_to_update['type'] = 'station'
@@ -142,9 +152,6 @@ def update_station(station_id):
     )
     public_data = shared.esiclient.request(op)
     if public_data.status != 200:
-        if public_data.status == 400:
-            logger.info('No station found for: ' + str(station_id) + ', it is probably a citadel.')
-            return
         logger.error('status: ' + str(public_data.status) + ' error with getting station data: ' + str(public_data.data))
         logger.error('headers: ' + str(public_data.header))
         logger.error('system with error: ' + str(station_id))

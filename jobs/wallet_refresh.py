@@ -8,6 +8,7 @@ from jobs import context_handler
 from app.flask_shared_modules import rq
 
 from requests import exceptions
+from esipy.exceptions import APIException
 
 from datetime import datetime
 from datetime import timedelta
@@ -174,8 +175,13 @@ def process_missed_market_transactions(missed_journal_ids, entity_doc, division=
             logger.error('journal entry in missed market transactions array not found, this should never happen')
             logger.error('entity with error: ' + str(entity_doc['id']) + ' journal entry error: ' + str(missed_journal_id))
             continue
-        if 'context_id' in result and result['context_id_type'] == 'market_transaction_id':
+        if 'context' in result and 'type' in result['context'][0] and result['context'][0]['type'] == 'market_transaction_id':
+            result['context_id_type'] = result['context'][0]['type']
+            result['context_id'] = result['context'][0]['id']
+            result['context'] = [{}]
             context_handler.update_market_transaction(result, entity_doc, division)
+            del result['context_id_type']
+            del result['context_id']
             id_filter = {'id': result['id']}
             update = {'$set': result}
             shared.db.journals.update_one(id_filter, update)
@@ -200,6 +206,10 @@ def refresh_token(user_doc, data_to_update={}):
             tokens = shared.esisecurity.refresh()
         except exceptions.SSLError:
             logger.error('ssl error refreshing token for ' + str(user_doc['id']))
+            return False
+        except APIException as e:
+            logger.error('error refreshing token for: ' + str(user_doc['id']))
+            logger.error('error is: ' + str(e))
             return False
         data_to_update['tokens'] = tokens
         delta_expire = timedelta(seconds=data_to_update['tokens']['expires_in'])
