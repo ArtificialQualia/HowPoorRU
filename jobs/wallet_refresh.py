@@ -107,14 +107,7 @@ def process_corp(user_doc):
             missed_journal_string = 'missed_market_transactions_' + str(wallet_division)
             missed_journal_ids = corp_doc.get(missed_journal_string) or []
             process_missed_market_transactions(missed_journal_ids, corp_doc, wallet_division)
-            journal_division_entries = process_journal(1, corp_doc, wallet_division)
-            corp_data_to_update[missed_journal_string] = corp_doc[missed_journal_string]
-            if len(journal_division_entries) > 0:
-                corp_data_to_update['last_journal_entry_' + str(wallet_division)] = journal_division_entries[0]['id']
-                for entry in journal_division_entries:
-                    id_filter = {'id': entry['id']}
-                    update = {'$set': entry}
-                    shared.db.journals.update_one(id_filter, update, upsert=True)
+            process_journal(1, corp_doc, wallet_division)
         corp_data_to_update['last_journal_update'] = now_utc.timestamp()
         
     corp_filter = {'id': corp_doc['id']}
@@ -144,15 +137,8 @@ def process_character(user_doc):
     if last_update + timedelta(hours=1) < now_utc:
         missed_journal_ids = user_doc.get('missed_market_transactions') or []
         process_missed_market_transactions(missed_journal_ids, user_doc)
-        new_journal_entries = process_journal(1, user_doc)
-        data_to_update['missed_market_transactions'] = user_doc['missed_market_transactions']
+        process_journal(1, user_doc)
         data_to_update['last_journal_update'] = now_utc.timestamp()
-        if len(new_journal_entries) > 0:
-            data_to_update['last_journal_entry'] = new_journal_entries[0]['id']
-            for entry in new_journal_entries:
-                id_filter = {'id': entry['id']}
-                update = {'$set': entry}
-                shared.db.journals.update_one(id_filter, update, upsert=True)
         
     character_filter = {'id': user_doc['id']}
     update = {"$set": data_to_update}
@@ -239,6 +225,8 @@ def process_journal(page, entity_doc, division=None):
         logger.error('error with getting journal data: ' + str(entity_doc['id']))
         raise JournalError()
     num_pages = int(journal.header['X-Pages'][0])
+    if page < num_pages and journal.data[-1]['id'] > last_journal_entry:
+        process_journal(page+1, entity_doc, division)
     new_journal_entries = []
     for journal_entry in journal.data:
         if journal_entry['id'] > last_journal_entry:
@@ -288,12 +276,19 @@ def process_journal(page, entity_doc, division=None):
             decode_journal_entry(journal_entry, entity_doc, division)
             new_journal_entries.append(journal_entry)
         else:
-            return new_journal_entries
-    if page < num_pages:
-        next_pages_entries = process_journal(page+1, entity_doc, division)
-        if next_pages_entries:
-            return new_journal_entries.extend(next_pages_entries)
-    return new_journal_entries
+            break
+    if len(new_journal_entries) > 0:
+        if division:
+            entity_doc['last_journal_entry' + str(division)] = new_journal_entries[0]['id']
+        else:
+            entity_doc['last_journal_entry'] = new_journal_entries[0]['id']
+        for entry in new_journal_entries:
+            id_filter = {'id': entry['id']}
+            update = {'$set': entry}
+            shared.db.journals.update_one(id_filter, update, upsert=True) 
+        entity_filter = {'id': entity_doc['id']}
+        update = {"$set": entity_doc}
+        shared.db.entities.update_one(entity_filter, update)
     
 def decode_journal_entry(journal_entry, entity_doc, division):
     """ add embedded docs for journal entry fields """

@@ -149,7 +149,7 @@ def alliance_update(alliance_id, public_data=None):
 
 def decode_party_id(party_id):
     """ function to handle 'unknown' party_ids.  The search endpoint could also be used but there are only a few party types """
-    if party_id == 2:
+    if party_id <= 2:
         return
     id_filter = {'id': party_id}
     result = db.entities.find_one(id_filter)
